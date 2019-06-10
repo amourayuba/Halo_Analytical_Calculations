@@ -3,39 +3,6 @@ import matplotlib.pyplot as plt
 import camb
 from cosmo_parameters import *
 
-### New set of cosmo parameters used here using
-#Eiseinstein and Hu conventions and Planck 2018 values
-
-h = 0.6766
-c = 3e5       #speed of light km/s
-ombh2 = 0.02242   #Density of baryons in units of h2
-omb = ombh2/h**2  #Density of baryons
-omch2 = 0.11933   #Density of CDM in units h2
-omc = omch2/h**2    #Density of CDM
-omnuh2 = 0.0006451439   #Density of neutrinos in units h²
-omnu = omnuh2/h**2     #density of neutrinos
-omh2 = ombh2 + omch2 + omnuh2   #Density of matter in units h²
-om = omb + omc          #Density of matter
-fcb = (omch2+ombh2)/omh2
-fc = ombh2/omh2
-fb = omch2/omh2
-fnub = (ombh2 + omnuh2)/omh2
-fnu = omnuh2/omh2
-
-ns : 0.9626   #spectral index
-oml = 0.6889   #density of Lambda
-om0 = oml + omb + omc  #Total density including lambda
-
-Tcmb = 2.7255      #Temperature of CMB
-theta_27 = Tcmb/2.7  #A random parameter they introduced for idontknowhy
-Nnu = 1           #Number of massive neutrino species
-mnu = 91.5*omnuh2/Nnu   #Mass of neutrino part
-zeq = 3387              #z at matter-radiation equality
-zdrag = 1060.01        # z at compton drag
-yd = (1+zeq)/(1+zdrag)
-s = 147.21           #Sound horizon at recombination in Mpc
-delta_H = 1.94*10**(-5)*om**(-0.785-0.05*np.log(om))*np.exp((ns-1) + 1.97*(ns-1)**2)
-
 def q(k):            #Normalised version of k see eq (5)
     return (k/19)/np.sqrt(omh2*10000*(1+zeq))
 
@@ -115,18 +82,46 @@ def T2(k):
     a2 = (1 + 3.89*qr + (16.1*qr)**2 + (5.46*qr)**3 + (6.71*qr)**4)**(-0.25)
     return a1*a2
 
-k = np.linspace(0.01, 10, 100000)
-y1 = Tcb(k, 0)
-y2 = T2(k)
-plt.loglog(k/h, y1)
-plt.loglog(k/h, y2)
-plt.xlabel('k $\Omega_0h**2Mpc^{-1}$')
-plt.ylabel('T(k)')
-plt.legend(['Eiseinstein and Hu', 'MBW'])
-plt.title('Transfer functions from Eiseinstein and Hu and from Mo, Bosch and White')
-plt.show()
+#k = np.linspace(0.01, 10, 100000)
+#y1 = Tcb(k, 0)
+#y2 = T2(k)
+#plt.loglog(k/h, y1)
+#plt.loglog(k/h, y2)
+#plt.xlabel('k $\Omega_0h**2Mpc^{-1}$')
+#plt.ylabel('T(k)')
+#plt.legend(['Eiseinstein and Hu', 'MBW'])
+#plt.title('Transfer functions from Eiseinstein and Hu and from Mo, Bosch and White')
+#plt.show()
+
+def sigma8_normalisation(sigma8):
+    return (sigma8/0.41949012)**2 #(sigma8/0.6675070983462029)**2
+def nor_sigma8_camb(sigma8):
+    return (sigma8/5.18185339e-08)**2 #(sigma8 / 7.113556413980577e-08) ** 2
 
 
-def power_spectrum_a(k, delta_h):
-    a1 = 2*np.pi**2*(0.01*c)**(ns+3)*(D1(z)/D1(0))**2
-    return a1*k**ns*T2(k)**2*delta_h**2
+def power_spectrum_a(k, delta_h, z=0, camb_ps = False, sigma8=1, H0=67.5, ombh2=0.022, omch2=0.122, ns=0.965, kmax=10):
+    if camb_ps:
+        return 2 * np.pi ** 2 * nor_sigma8_camb(sigma8) * (D1(z) / D1(0)) ** 2 * primordial_PK(k) * k ** 4 * T2(
+            k) ** 2 / k ** 3
+    else:
+        a1 = 2*np.pi**2*(0.01*c)**(ns+3)*(D1(z)/D1(0))**2
+        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k)**2*delta_h**2
+
+
+pars = camb.CAMBparams()
+pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122)
+pars.InitPower.set_params(ns=0.965)
+pars.set_matter_power(redshifts=[0], kmax=10)
+results = camb.get_results(pars)
+
+def primordial_PK(k):
+    return results.Params.scalar_power(k)
+
+def power_spectrum_a(k, delta_h, z=0, camb_ps = False, sigma8=1, H0=67.5, ombh2=0.022, omch2=0.122, ns=0.965, kmax=10):
+    if camb_ps:
+        return 2*np.pi**2*nor_sigma8_camb(sigma8)*(D1(z)/D1(0))**2*primordial_PK(k)*k** 4* T2(k) ** 2 / k ** 3
+    else:
+        a1 = 2*np.pi**2*(0.01*c)**(ns+3)*(D1(z)/D1(0))**2
+        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k)**2*delta_h**2
+
+

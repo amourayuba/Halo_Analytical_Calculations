@@ -1,6 +1,5 @@
 from __future__ import  division
 from scipy import special
-from cosmo_today import *
 from cosmo_parameters import *
 
 
