@@ -36,6 +36,6 @@ def D(z, om0, ol0):
     """Normalised linear growth factor"""
     return growth(z, om0, ol0)/((1+z)*growth(0, om0, ol0))
 
-def delta_c(z, om0, ol0):
+def delta_c(z, om0=0.31, ol0=0.69):
     """critical overdensity"""
-    return 1.68/D(z, om0, ol0)
+    return 1.686*growth(z, om0, ol0)/growth(0, om0, ol0)

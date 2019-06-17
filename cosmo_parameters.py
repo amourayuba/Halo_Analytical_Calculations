@@ -43,7 +43,7 @@ zeq = 3387              #z at matter-radiation equality
 zdrag = 1060.01        # z at compton drag
 yd = (1+zeq)/(1+zdrag)
 s = 147.21           #Sound horizon at recombination in Mpc
-delta_H = 1.94*10**(-5)*om**(-0.785-0.05*np.log(om))*np.exp((ns-1) + 1.97*(ns-1)**2)
+#delta_H = 1.94*10**(-5)*om**(-0.785-0.05*np.log(om))*np.exp((ns-1) + 1.97*(ns-1)**2)
 
 
 def hubble_ratio(z, omega_l0, omega_m0, omega_r0):
@@ -68,5 +68,5 @@ def omega(z, omega_0, h):
     """Value of the total density in the universe as a function of redshift"""
     return 1+(omega_0-1)*(1+z)**2/h**2
 
-def rho_m(z=0):
-    return omega_m(z, omega_m0, hubble_ratio(z, omega_l0, omega_m0, omega_r0))*(3*100**2)/(8*np.pi*G)
+def rho_m(z=0, om0 = omega_m0):
+    return omega_m(z, om0, hubble_ratio(z, omega_l0, om0, omega_r0))*(3*100**2)/(8*np.pi*G)

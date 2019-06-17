@@ -72,12 +72,12 @@ def Tcb(k, z):
 
 ### Limit \Omega_b << Omega_m
 
-def q2(k):
-    gamma = om*h*np.exp(-omb*(1 + np.sqrt(2*h)/om))
+def q2(k, h, om0, omb):
+    gamma = om0*h*np.exp(-omb*(1 + np.sqrt(2*h)/om0))
     return k/(gamma)
 
-def T2(k):
-    qr = q2(k)
+def T2(k, h, om0, omb):
+    qr = q2(k, h, om0, omb)
     a1 = np.log(1 + 2.34*qr)/(2.34*qr)
     a2 = (1 + 3.89*qr + (16.1*qr)**2 + (5.46*qr)**3 + (6.71*qr)**4)**(-0.25)
     return a1*a2
@@ -94,18 +94,12 @@ def T2(k):
 #plt.show()
 
 def sigma8_normalisation(sigma8):
-    return (sigma8/0.41949012)**2 #(sigma8/0.6675070983462029)**2
+    return (sigma8*1.046808e-4)**2
+
+#(sigma8/0.41949012)**2 #(sigma8/0.6675070983462029)**2
 def nor_sigma8_camb(sigma8):
     return (sigma8/5.18185339e-08)**2 #(sigma8 / 7.113556413980577e-08) ** 2
 
-
-def power_spectrum_a(k, delta_h, z=0, camb_ps = False, sigma8=1, H0=67.5, ombh2=0.022, omch2=0.122, ns=0.965, kmax=10):
-    if camb_ps:
-        return 2 * np.pi ** 2 * nor_sigma8_camb(sigma8) * (D1(z) / D1(0)) ** 2 * primordial_PK(k) * k ** 4 * T2(
-            k) ** 2 / k ** 3
-    else:
-        a1 = 2*np.pi**2*(0.01*c)**(ns+3)*(D1(z)/D1(0))**2
-        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k)**2*delta_h**2
 
 
 pars = camb.CAMBparams()
@@ -117,11 +111,11 @@ results = camb.get_results(pars)
 def primordial_PK(k):
     return results.Params.scalar_power(k)
 
-def power_spectrum_a(k, delta_h, z=0, camb_ps = False, sigma8=1, H0=67.5, ombh2=0.022, omch2=0.122, ns=0.965, kmax=10):
+def power_spectrum_a(k,  z=0, camb_ps = False, sigma8=0.8, h=h, om0=omega_m0, omb=omb, ns=0.965):
     if camb_ps:
         return 2*np.pi**2*nor_sigma8_camb(sigma8)*(D1(z)/D1(0))**2*primordial_PK(k)*k** 4* T2(k) ** 2 / k ** 3
     else:
         a1 = 2*np.pi**2*(0.01*c)**(ns+3)*(D1(z)/D1(0))**2
-        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k)**2*delta_h**2
+        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k, h, om0, omb)**2
 
 
