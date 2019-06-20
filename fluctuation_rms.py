@@ -3,6 +3,8 @@ import numpy as np
 from scipy.integrate import quad
 from cosmo_parameters import *
 from power_spectrum_analytic import *
+from colossus.cosmology import cosmology
+cosmo = cosmology.setCosmology('planck15');
 
 
 def W_th(k, R):
@@ -57,7 +59,7 @@ def sigma_a_M(M, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
         R = (3*M / (4*np.pi*rho_m(z, om0))) ** (1 / 3) #/ np.sqrt(2 * np.pi)
         for rad in R:
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
             res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2)))
         return np.array(res)
 
@@ -66,7 +68,7 @@ def sigma_a_M(M, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
         R = (3 * M / (4 * np.pi * rho_m(z, om0))) ** (1 / 3)
         for rad in R:
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
             res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2*np.pi**2)))
         return np.array(res)
 
@@ -75,7 +77,7 @@ def sigma_a_M(M, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
         R = (3*M/(4*rho_m(z, om0)*np.pi))**(1/3)
         for rad in R:
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
             res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
         return np.array(res)
     else:
@@ -94,7 +96,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
 
@@ -102,7 +104,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
 
@@ -110,7 +112,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
         else:
@@ -118,17 +120,17 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
     else:
         if window == 'Gauss':
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
         elif window == 'TopHat':
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
         elif window == 'k-Sharp':
             def f(k):
-                return k ** 2 * power_spectrum_a(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
         else:
             return ValueError('window argument has to be either Gauss TopHat or k-Sharp')
@@ -149,3 +151,22 @@ plt.ylabel('$\sigma_8$')
 plt.colorbar()
 plt.show()'''
 
+'''R = 10**np.arange(-3 , 2.4, 0.005)
+sigma_tophat = cosmo.sigma(R, 0.0)
+sigma_sharpk = cosmo.sigma(R, 0.0, filt = 'sharp-k')
+sigma_gaussian = cosmo.sigma(R, 0.0, filt = 'gaussian')
+y1 = sigma_a_R(R)
+y2 = sigma_a_R(R, window='TopHat')
+y3 = sigma_a_R(R, window='k-Sharp')
+plt.figure()
+plt.loglog()
+plt.xlabel('R(Mpc/h)')
+plt.ylabel('sigma(R)')
+plt.plot(R, sigma_tophat, '--b', label = 'Colossus tophat')
+plt.plot(R, sigma_sharpk, '--k', label = 'Colossus sharp-k')
+plt.plot(R, sigma_gaussian, '--g', label = 'Colossus gaussian')
+plt.plot(R, y2, '-b', label = 'Yuba tophat')
+plt.plot(R, y3, '-k', label = 'Yuba sharp-k')
+plt.plot(R, y1, '-g', label = 'Yuba gaussian')
+plt.legend()
+plt.show()'''

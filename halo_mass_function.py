@@ -1,6 +1,7 @@
 from __future__ import division
 from colossus.cosmology import cosmology
 from colossus.lss import mass_function
+from colossus.lss import peaks
 import numpy as np
 import matplotlib.pyplot as plt
 from cosmo_parameters import *
@@ -32,19 +33,35 @@ def nu(M, z=0, h=0.67, om0=omega_m0, ol0=omega_l0, omb=omb, sig8 = sigma8, win='
 
 def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=0.67, om0=omega_m0, ol0=omega_l0, omb=omb, sigma8 = sigma8, win='Gauss'):
     mass = np.logspace(lMmin, lMmax, npoints)
-    res = nu(mass, z=z, h=h, om0=om0, ol0=ol0, omb=omb, sig8 = sigma8, win='Gauss' )
+    res = nu(mass, z=z, h=h, om0=om0, ol0=ol0, omb=omb, sig8 = sigma8, win=win )
     return np.min(mass[res>1])
 
 
 
 '''M = np.logspace(11,15, 100)
-z = [0,0.5,1,2]
+z = [0, 0.5, 1, 2, 3, 4]
 for el in z:
     y1 = hmf(M, z=el, sigma8=0.8)
-    plt.loglog(M[1:], -y1, label='z='+str(el))
+    plt.loglog(M[1:], y1, label='z='+str(el))
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('n(M) [$h^4/Mpc^{3}/M_\odot$]', size = 15)
 plt.title('Press and Schechter halo mass function', size = 15)
+plt.legend()
+plt.show()'''
+
+
+'''M = np.logspace(11,16, 100)
+z = [0, 1, 2, 3, 4]
+for el in z:
+    y1 = fps(nu(M, z=el, sig8 = 0.8159, win='TopHat'))
+    y2 = fps(peaks.peakHeight(M, z= el))
+    plt.loglog(M, y1, label = 'z='+str(el)+' Yuba')
+    plt.loglog(M, y2, '--', label = ' Colossus')
+plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
+plt.ylabel('f', size = 15)
+plt.xlim(2e11, 8e15)
+plt.ylim(1e-14, 1)
+plt.title('Press and Schechter function', size = 15)
 plt.legend()
 plt.show()'''
 
@@ -58,6 +75,23 @@ plt.title('Press and Schechter halo mass function', size = 15)
 plt.legend()
 plt.show()'''
 
+'''M = np.logspace(11,16, 100)
+sigma8 = [0.6,0.7,0.8,0.9,1,1.1]
+for el in sigma8:
+    y1 = fps(nu(M, z=0, sig8 = el, win='TopHat'))
+    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': om0, 'Ob0': 0.043, 'sigma8': el, 'ns': ns}
+    cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+    y2 = fps(peaks.peakHeight(M, z= 0))
+    #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
+    plt.loglog(M, y1, label = 'sigma='+str(el)+' Yuba')
+    plt.loglog(M, y2, '--', label = ' Colossus')
+plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
+plt.ylabel('f', size = 15)
+plt.xlim(2e11, 8e15)
+plt.ylim(1e-14, 1)
+plt.title('Press and Schechter function', size = 15)
+plt.legend()
+plt.show()'''
 
 '''om1 = [0.2,0.3,0.4,0.5]
 for el in om1:
@@ -69,6 +103,24 @@ plt.title('Press and Schechter halo mass function', size = 15)
 plt.legend()
 plt.show()'''
 
+
+'''M = np.logspace(13,17, 100)
+om1 = [0.1, 0.2, 0.3,0.4,0.5, 0.6]
+for el in om1:
+    y1 = fps(nu(M, z=0, om0=el, ol0=1-el,  sig8 = 0.8154, win='TopHat'))
+    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': el, 'Ode0' : 1-el, 'Ob0': 0.043, 'sigma8': 0.8154, 'ns': ns}
+    cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+    y2 = fps(peaks.peakHeight(M, z= 0))
+    #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
+    plt.loglog(M, y1, label = '$\Omega_m=$'+str(el)+' Yuba')
+    plt.loglog(M, y2, '--', label = ' Colossus')
+plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
+plt.ylabel('f', size = 15)
+plt.xlim(2e13, 8e16)
+plt.ylim(1e-14, 1)
+plt.title('Press and Schechter function', size = 15)
+plt.legend()
+plt.show()'''
 
 def cumulative_hmf(M, prec = 1000, z=0, window='Gauss', sigma8=sigma8, om0=omega_m0, ol0=omega_l0, h=h):
     x = np.linspace(1, M, prec)
@@ -108,6 +160,22 @@ plt.ylabel('$\sigma_8$')
 plt.colorbar()
 plt.show()'''
 
+
+'''omv = np.linspace(0.2, 0.4, 30)
+#ombv = 0.13*omv
+sig8 = np.linspace(0.6, 1, 30)
+nom = np.zeros((30,30))
+mt = np.logspace(14,16, 200)
+for i in range(30):
+    for j in range(30):
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': omv[i], 'Ode0': 1-omv[i], 'Ob0': 0.048, 'sigma8': sig8[j], 'ns': ns}
+        cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+        nom[i,j] = np.sum(mass_function.massFunction(mt,z=0, mdef = '200m', model = 'tinker08', q_out = 'f'))
+        plt.contourf(omv, sig8, nom+1, levels=50, cmap='RdGy')
+plt.xlabel('$\Omega_m$', size = 15)
+plt.ylabel('$\sigma_8$', size = 15)
+plt.colorbar()
+plt.show()'''
 
 
 '''omv = np.linspace(0.15, 0.7, 30)
@@ -217,3 +285,22 @@ plt.ylabel('$\sigma_8$', size = 15)
 plt.colorbar()
 plt.title('$\log M^\star$')
 plt.show()'''
+
+
+'''z = np.linspace(0, 10, 50)
+res = []
+Ms = peaks.nonLinearMass(z)
+for el in z:
+    res.append(Mstar(z=el, lMmin=1, lMmax=13, npoints=1000, om0=0.3089, ol0=0.691, sigma8=0.8159, win='TopHat'))
+plt.plot(z+1, res, label = 'Yuba ')
+plt.plot(z+1, Ms, label = 'Colossus')
+plt.loglog()
+plt.xlabel('z', size = 15)
+plt.ylabel('$M^\star$[$h^{-1}M_\odot$]', size = 15)
+#plt.xlim(0, 4)
+#plt.ylim(1e8, 1e13)
+#plt.title('Press and Schechter caracteristic non linear mass', size=15)
+plt.legend()
+plt.show()'''
+
+

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from growth_factor import *
 import camb
 from cosmo_parameters import *
 
@@ -94,7 +95,7 @@ def T2(k, h, om0, omb):
 #plt.show()
 
 def sigma8_normalisation(sigma8):
-    return (sigma8*1.046808e-4)**2
+    return (sigma8*1.046808e-4*0.8/(2.3*1.77e-8))**2
 
 #(sigma8/0.41949012)**2 #(sigma8/0.6675070983462029)**2
 def nor_sigma8_camb(sigma8):
@@ -119,3 +120,11 @@ def power_spectrum_a(k,  z=0, camb_ps = False, sigma8=0.8, h=h, om0=omega_m0, om
         return sigma8_normalisation(sigma8)*a1*k**ns*T2(k, h, om0, omb)**2
 
 
+
+
+def power_spectrum_a2(k,  z=0, camb_ps = False, sigma8=0.8, h=h, om0=omega_m0, ol0 = omega_l0, omb=omb, ns=0.965):
+    if camb_ps:
+        return 2*np.pi**2*nor_sigma8_camb(sigma8)*(D1(z)/D1(0))**2*primordial_PK(k)*k** 4* T2(k) ** 2 / k ** 3
+    else:
+        a1 = (D(z, om0, ol0))**2
+        return sigma8_normalisation(sigma8)*a1*k**ns*T2(k, h, om0, omb)**2
