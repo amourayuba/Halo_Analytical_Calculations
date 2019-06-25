@@ -22,31 +22,8 @@ def W_ksharp(k, R):
          Type : Sharp k cutoff"""
     return (k*R <= 1) + 0
 
-def sigma_camb(M, k, pk, window = W_gauss):
-    """
-    :param M: Mass, could be an nd.array
-    :param k: wavenumbers for calculating the integral nd array
-    :param pk: power spectrum values nd array same size as k
-    :param window: function. Smoothing window function
-    :return: nd array : values of the rms of the smoothed density field for the mass array entered
-    """
-    R = (3*np.pi*M/(4*rho_c*0.3))**(1/3)      #In units of Mpc/h
-    n = len(R)      #size of Mass imput
-    m = len(k)      #size of wavenumbers imput
 
-    Rmat = np.array([R]*m)   #Duplicating the R 1D array to get a n*m size matric
-    kmat = np.array([k]*n).transpose()  #Dupicating the k and pk 1D arrays to get n*m size matrix
-    pkmat = np.array([pk]*n).transpose()
-
-    winres = window(kmat, Rmat)    #Calculating every value of the window function without a boucle
-    dk = (np.max(k)-np.min(k))/len(k)  #element of k for approximating the integral
-    res = pkmat*kmat**2*winres         #Values inside the integral foreach k
-    integ = np.sum(res, axis=0)*dk     # approximate evaluation of the integral through k.
-    return np.sqrt(integ/(2*np.pi**2))
-
-
-
-def sigma_a_M(M, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, omb= omb):
+def sigma_a_M(M, window='TopHat', z=0, sig8=0.8, h=h, om0=om, omb= omb):
     """Provides the rms of the linear density field as a function of mass.
     Uses power_spectrum_a() function from power_spectrum_analytic.py. And a bunch of cosmo parameters from that file.
     :param M: array or list of Mass for which we want the rms (Msun/h)
@@ -54,37 +31,57 @@ def sigma_a_M(M, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
     :param z: redshift. Default = 0
     :return: list of arrays containting the rms result and absolute error
     """
-    if window == 'Gauss':
-        res = []
-        R = (3*M / (4*np.pi*rho_m(z, om0))) ** (1 / 3) #/ np.sqrt(2 * np.pi)
-        for rad in R:
-            def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
-            res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2)))
-        return np.array(res)
+    if type(M) == np.ndarray or type(M) == list:
+        if window == 'Gauss':
+            res = []
+            R = (M / (np.pi*rho_m(z, om0))) ** (1 / 3)/np.sqrt(2 * np.pi)
+            for rad in R:
+                def f(k):
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_gauss(k, rad)**2
+                res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2)))
+            return np.array(res)
 
-    elif window == 'TopHat':
-        res = []
-        R = (3 * M / (4 * np.pi * rho_m(z, om0))) ** (1 / 3)
-        for rad in R:
-            def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
-            res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2*np.pi**2)))
-        return np.array(res)
+        elif window == 'TopHat':
+            res = []
+            R = (3 * M / (4 * np.pi * rho_m(z, om0))) ** (1 / 3)
+            for rad in R:
+                def f(k):
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_th(k, rad)**2
+                res.append(np.sqrt(quad(f, 0, np.inf)[0] / (2*np.pi**2)))
+            return np.array(res)
 
-    elif window == 'k-Sharp':
-        res = []
-        R = (3*M/(4*rho_m(z, om0)*np.pi))**(1/3)
-        for rad in R:
-            def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
-            res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
-        return np.array(res)
+        elif window == 'k-Sharp':
+            res = []
+            R = (M/ (6 * np.pi **2* rho_m(z, om0))) ** (1 / 3)
+            for rad in R:
+                def f(k):
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_ksharp(k, rad)**2
+                res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
+            return np.array(res)
+        else:
+            return ValueError('window argument has to be either Gauss TopHat or k-Sharp')
     else:
-        return ValueError('window argument has to be either Gauss TopHat or k-Sharp')
+        if window == 'Gauss':
+            R = (1/np.sqrt(2*np.pi))*(M / (np.pi * rho_m(z, om0))) ** (1 / 3)
+            def f(k):
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_gauss(k, R) ** 2
+            return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
+        elif window == 'TopHat':
+            R = (3 * M / (4 * np.pi * rho_m(z, om0))) ** (1 / 3)
+            def f(k):
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_th(k, R) ** 2
+            return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
-def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, omb= omb):
+        elif window == 'k-Sharp':
+            R = (M/ (6 * np.pi **2* rho_m(z, om0))) ** (1 / 3)
+            def f(k):
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_ksharp(k, R) ** 2
+            return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
+        else:
+            return ValueError('window argument has to be either Gauss TopHat or k-Sharp')
+
+def sigma_a_R(R, window='Gauss', z=0, sig8=0.8, h=h, om0=om, omb= omb):
     """Provides the rms of the linear density field as a function of mass
     :param R: array or list of scales for which we want the rms (Mpc/h)
     :param window:  either 'TopHat', 'Gaussian' or 'k-Sharp' type of window function
@@ -96,7 +93,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_gauss(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
 
@@ -104,7 +101,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_th(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
 
@@ -112,7 +109,7 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
             res = []
             for rad in R:
                 def f(k):
-                    return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, rad)**2
+                    return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_ksharp(k, rad)**2
                 res.append(np.sqrt(quad(f, 0, np.inf)[0]/(2*np.pi**2)))
             return np.array(res)
         else:
@@ -120,17 +117,17 @@ def sigma_a_R(R, window='Gauss', z=0, camb_ps = False, sig8=0.8, h=h, om0=om, om
     else:
         if window == 'Gauss':
             def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_gauss(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_gauss(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
         elif window == 'TopHat':
             def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_th(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_th(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
 
         elif window == 'k-Sharp':
             def f(k):
-                return k ** 2 * power_spectrum_a2(k, z, camb_ps, sig8, h, om0, omb) * W_ksharp(k, R) ** 2
+                return k ** 2 * power_spectrum_a2(k, z, sig8, h, om0, omb) * W_ksharp(k, R) ** 2
             return np.sqrt(quad(f, 0, np.inf)[0] / (2 * np.pi ** 2))
         else:
             return ValueError('window argument has to be either Gauss TopHat or k-Sharp')
@@ -168,5 +165,25 @@ plt.plot(R, sigma_gaussian, '--g', label = 'Colossus gaussian')
 plt.plot(R, y2, '-b', label = 'Yuba tophat')
 plt.plot(R, y3, '-k', label = 'Yuba sharp-k')
 plt.plot(R, y1, '-g', label = 'Yuba gaussian')
+plt.legend()
+plt.show()'''
+
+
+
+'''R = 10**np.arange(-3 , 2.4, 0.005)
+yc2 = cosmo.sigma(R, 0.0)
+yc3 = cosmo.sigma(R, 0.0, filt = 'sharp-k')
+yc1 = cosmo.sigma(R, 0.0, filt = 'gaussian')
+y1 = sigma_a_R(R, sig8=0.8159)
+y2 = sigma_a_R(R, window='TopHat', sig8 = 0.8159)
+y3 = sigma_a_R(R, window='k-Sharp', sig8 = 0.8159)
+plt.xlabel('R [Mpc/h]', size = 15)
+plt.ylabel('$\sigma_{yuba}-\sigma_{col}/\sigma_{col}$', size = 15)
+plt.plot(R, (y2-yc2)/yc2, '-b', label = 'tophat')
+#plt.plot(R, (y3-yc3)/yc3, '-k', label = 'sharp-k')
+plt.plot(R, (y1-yc1)/yc1, '-g', label = 'gaussian')
+#plt.xlim(0.001, 200)
+plt.ylim(-0.12, 0.05)
+plt.xscale('log')
 plt.legend()
 plt.show()'''

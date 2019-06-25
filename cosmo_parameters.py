@@ -3,8 +3,7 @@ import numpy as np
 
 ### Fundamental set of parameters
 G = 4.30091e-9 #Units kpc/Msun x (km/s)^2
-H_0 = 70    #km/s/Mpc
-h = H_0/100
+H_0 = 76.66    #km/s/Mpc
 omega_m0 = 0.299
 omega_l0 = 0.7
 omega_r0 = 0.001
@@ -18,7 +17,7 @@ h = 0.6766
 c = 3e5       #speed of light km/s
 ombh2 = 0.02242   #Density of baryons in units of h2
 omb = ombh2/h**2  #Density of baryons
-omch2 = 0.11933   #Density of CDM in units h2
+omch2 = 0.122   #Density of CDM in units h2
 omc = omch2/h**2    #Density of CDM
 omnuh2 = 0.0006451439   #Density of neutrinos in units h²
 omnu = omnuh2/h**2     #density of neutrinos
@@ -32,7 +31,7 @@ fnu = omnuh2/omh2
 
 sigma8=0.8
 ns = 0.9626   #spectral index
-oml = 0.6889   #density of Lambda
+oml = 0.685   #density of Lambda
 om0 = oml + omb + omc  #Total density including lambda
 
 Tcmb = 2.7255      #Temperature of CMB
@@ -68,5 +67,5 @@ def omega(z, omega_0, h):
     """Value of the total density in the universe as a function of redshift"""
     return 1+(omega_0-1)*(1+z)**2/h**2
 
-def rho_m(z=0, om0 = omega_m0):
+def rho_m(z=0, om0 = om):
     return omega_m(z, om0, hubble_ratio(z, omega_l0, om0, omega_r0))*(3*100**2)/(8*np.pi*G)
