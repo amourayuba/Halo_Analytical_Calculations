@@ -6,7 +6,7 @@ G = 4.30091e-9 #Units kpc/Msun x (km/s)^2
 H_0 = 76.66    #km/s/Mpc
 omega_m0 = 0.299
 omega_l0 = 0.7
-omega_r0 = 0.001
+omega_r0 = 0.00001
 omega_0 = omega_m0 + omega_r0 + omega_l0
 rho_c = 3*100**2/(8*np.pi*G)       # h^2xMsun/Mpc**3
 
@@ -51,21 +51,22 @@ def hubble_ratio(z, omega_l0, omega_m0, omega_r0):
     omega_0 = omega_l0+omega_m0+omega_r0
     return np.sqrt(omega_l0 + (1-omega_0)*(1+z)**2 + omega_m0*(1+z)**3 + omega_r0*(1+z)**4)
 
-def omega_m (z, omega_m0, h):
+def omega_m (z, omgm0=om, omgl0=oml, omgr0=omega_r0):
     """Value of the density of matter in the universe as a function of redshift"""
-    return omega_m0*(1+z)**3/h**2
+    return omega_m0*(1+z)**3/hubble_ratio(z, omgl0, omgm0, omgr0)**2
 
-def omega_r (z, omega_r0, h):
+def omega_r (z, omega_r0=omega_r0, omega_l0=oml, omega_m0=om):
     """Value of the density of radiation in the universe as a function of redshift"""
-    return omega_r0*(1+z)**4/h**2
+    return omega_r0*(1+z)**4/hubble_ratio(z, omega_l0, omega_m0, omega_r0)**2
 
-def omega_l (omega_l0, h):
+def omega_l (z=0, omega_l0=omega_l0, omega_m0=om, omega_r0=omega_r0):
     """Value of the density of DE in the universe as a function of redshift"""
-    return omega_l0/h**2
+    return omega_l0/hubble_ratio(z, omega_l0, omega_m0, omega_r0)**2
 
-def omega(z, omega_0, h):
+def omega(z, omega_l0=omega_l0, omega_m0=om, omega_r0=omega_r0):
     """Value of the total density in the universe as a function of redshift"""
-    return 1+(omega_0-1)*(1+z)**2/h**2
+    omega_0 = omega_r0+omega_l0+omega_m0
+    return 1+(omega_0-1)*(1+z)**2/hubble_ratio(z, omega_l0, omega_m0, omega_r0)**2
 
 def rho_m(z=0, om0 = om):
-    return omega_m(z, om0, hubble_ratio(z, omega_l0, om0, omega_r0))*(3*100**2)/(8*np.pi*G)
+    return omega_m(z, om0)*(3*100**2)/(8*np.pi*G)

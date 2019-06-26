@@ -117,7 +117,7 @@ def sigma_camb(x, sig8=0.8, h=h, kmax=30, z=[0], window='TopHat', xin='M', prec=
             return sigma_camb_R(x, sig8, h, omb, om0, ol0, ns, kmax, z, prec, W_ksharp)
     elif xin == 'M':
         if window == 'TopHat':
-            R = (3 * np.pi * x / (4 * rho_m(z[0], om0))) ** (1 / 3)
+            R = (3 *x / (4 *np.pi*rho_m(0, om0))) ** (1 / 3)
             return sigma_camb_R(R, sig8, h, omb, om0, ol0, ns, kmax, z, prec, W_th)
         elif window == 'Gauss':
             R = (x/rho_m(z[0], om0))**(1/3)/np.sqrt(np.pi)

@@ -1,18 +1,12 @@
 from __future__ import division
-from colossus.cosmology import cosmology
 from colossus.lss import mass_function
 from colossus.lss import peaks
-import numpy as np
-import matplotlib.pyplot as plt
-from cosmo_parameters import *
-from power_spectrum_analytic import *
-from growth_factor import *
 from fluctuation_rms import *
-
+from camb_fluctuation_rms import *
 
 cosmology.setCosmology('planck15');
 
-def hmf(M, z=0, window='TopHat', sigma8=sigma8, om0=omega_m0, ol0=omega_l0, h=h, omb=omb):
+def hmf(M, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, h=h, omb=omb):
     del_c = delta_c(z, om0, ol0)
     if type(M) == np.ndarray or type(M) == list:
         sig = sigma_a_M(M, window=window, z=0, sig8=sigma8, h=h, om0=om0, omb=omb)
@@ -42,6 +36,26 @@ def fps(nu):
 
 def nu(M, z=0, h=0.67, om0=omega_m0, ol0=omega_l0, omb=omb, sig8 = sigma8, win='Gauss' ):
     return delta_c(z, om0, ol0)/sigma_a_M(M, z=z, sig8=sig8, h=h, om0=om0, omb=omb, window=win)
+
+
+def nu_camb(M, z=[0], om0=om, ol0=oml, omb=omb, sig8=0.812, h=h, kmax=30, window='TopHat', prec=1000 ):
+    return delta_c(0, om0, ol0)/sigma_camb(M, sig8, h,
+                                              kmax, z, window, 'M', prec, om0, ol0, omb)
+
+
+################-------------------Peak Heigh CAMB-COLOSSUS COMPARISON------------###################################
+M = np.logspace(9, 17, 1000)
+z = [0, 1, 2, 4]
+for el in z:
+    nu1 = nu_camb(M, z=[el])
+    nu2 = peaks.peakHeight(M, z=el)
+    plt.loglog(M, nu1, label='CAMB  z='+str(el))
+    plt.loglog(M, nu2,'--', label='COLOSSUS')
+plt.xlabel('M [$M_\odot/h$]', size=15)
+plt.ylabel(r'$\nu$', size=15)
+plt.legend()
+plt.show()
+
 
 def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=0.67, om0=omega_m0, ol0=omega_l0, omb=omb, sigma8 = sigma8, win='Gauss'):
     mass = np.logspace(lMmin, lMmax, npoints)
@@ -179,7 +193,7 @@ plt.ylabel('$\sigma_8$', size = 15)
 plt.colorbar()
 plt.show()'''
 
-size = 15
+'''size = 15
 omv = np.linspace(0.2, 0.4, size)
 olv = 1-omv
 #ombv = 0.13*omv
@@ -193,7 +207,7 @@ plt.contourf(omv, sig8, nom+1, levels=60, cmap='RdGy')
 plt.xlabel('$\Omega_m$', size = 15)
 plt.ylabel('$\sigma_8$', size = 15)
 plt.colorbar()
-plt.show()
+plt.show()'''
 
 '''size=30
 omv = np.linspace(0.05, 0.5, size)
@@ -308,7 +322,7 @@ plt.ylim(2e10, 5e14)
 plt.title('Press and Schechter caracteristic non linear mass', size=15)
 plt.show()'''
 
-
+##########-----------------omega_m vs sigma8 Mstar=const-----------------------######################"
 '''omv = np.linspace(0.01, 0.7, 30)
 sig8 = np.linspace(0.1, 1.5, 30)
 nom = np.zeros((30,30))
