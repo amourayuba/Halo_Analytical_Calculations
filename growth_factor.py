@@ -11,11 +11,12 @@ def growth_factor_pt(ol, om):
 def ibeta(x, a, b):
     return special.beta(a, b)*special.betainc(a, b, x)
 
+
 def growth_factor_z(z, om0, ol0, ok, N=50):
     """Calculate the linear growth factor as a function of redshift"""
     or0 = 1-om0-ol0-ok  #Calculating H(z)/H0
     ol = omega_l(ol0, h)        #Calculating the Dark Energy density at z
-    om = omega_m(z, om0, ol0, )     #Matter density at z
+    om = omega_m(z, om0, ol0, or0)     #Matter density at z
     ok = 1-ol-om
     if ok == 0:
         return (5*om/2)*1/(om**(4/7)-ol+(1+om/2)*(1+ol/70))
@@ -37,4 +38,4 @@ def D(z, om0, ol0):
 
 def delta_c(z, om0=om, ol0=oml):
     """critical overdensity"""
-    return 1.686*growth(z, om0, ol0)/growth(0, om0, ol0)
+    return 1.686*growth(0, om0, ol0)*(1+z)/growth(z, om0, ol0)
