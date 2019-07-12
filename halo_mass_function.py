@@ -2,15 +2,11 @@ from __future__ import division
 from colossus.lss import mass_function
 from colossus.lss import peaks
 from fluctuation_rms import *
-from camb_fluctuation_rms import *
 import astropy as aspy
 from astropy.cosmology import LambdaCDM
 
 my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
 cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-
-
-
 
 
 
@@ -23,41 +19,14 @@ cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 ########################################################################################################################
 
 
-def hmf(M, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, h=h, omb=omb):
-    del_c = delta_c(z, om0, ol0)
-    if type(M) == np.ndarray or type(M) == list:
-        sig = sigma_a_M(M, window=window, z=0, sig8=sigma8, h=h, om0=om0, omb=omb)
-        dlsig = np.log(sig[1:]/sig[:-1])
-        dlM = np.log(M[1:]/M[:-1])
-        new_sig = (sig[1:]+sig[:-1])*0.5
-        new_m = (M[1:]+M[:-1])*0.5
-
-        ra1 = np.sqrt(2/np.pi)*rho_m(z=0, om0=om0)*del_c/(new_m**2*new_sig)
-        ra2 = np.exp(-del_c**2/(2*new_sig**2))
-        ra3 = dlsig/dlM
-        return -ra1*ra2*ra3
-    else:
-        nM = np.array([0.999*M, 1.001*M])
-        sig = sigma_a_M(nM, window=window, z=0, sig8=sigma8, h=h, om0=om0, omb=omb)
-        dlsig = np.log(sig[1:] / sig[:-1])
-        dlM = np.log(nM[1:] / nM[:-1])
-        new_sig = (sig[1:] + sig[:-1]) * 0.5
-        new_m = (nM[1:] + nM[:-1]) * 0.5
-
-        ra1 = np.sqrt(2 / np.pi) * rho_m(z=0, om0=om0) * del_c / (new_m ** 2 * new_sig)
-        ra2 = np.exp(-del_c ** 2 / (2 * new_sig ** 2))
-        ra3 = dlsig / dlM
-        return -ra1 * ra2 * ra3
-
-
-def hmf_camb(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000, out='hmf'):
+def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000, out='hmf', camb=False):
     if type(z)==np.ndarray:
         l = len(z)
         del_c = delta_c(z, om0, ol0)  #shape (l, )
 
         if type(M) == np.ndarray or type(M) == list:
             n = len(M)-1
-            sig = sigma_camb(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb) #shape : (n, )
+            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) #shape : (n, )
             dlsig = np.log(sig[1:] / sig[:-1])            #shape : (n-1, )
             dlM = np.log(M[1:] / M[:-1])        #shape : (n-1, )
             new_sig = (sig[1:] + sig[:-1]) * 0.5    #shape : (n-1, )
@@ -78,7 +47,7 @@ def hmf_camb(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h
                 return -ra2 * ra3
         else:
             nM = np.array([0.999 * M, 1.001 * M])
-            sig = sigma_camb(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb)
+            sig = sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)
             dlsig = np.log(sig[1:] / sig[:-1])
             dlM = np.log(nM[1:] / nM[:-1])
             new_sig = (sig[1:] + sig[:-1]) * 0.5
@@ -97,7 +66,7 @@ def hmf_camb(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h
     else:
         del_c = delta_c(z, om0, ol0)
         if type(M) == np.ndarray or type(M) == list:
-            sig = sigma_camb(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb)
+            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)
             dlsig = np.log(sig[1:]/sig[:-1])
             dlM = np.log(M[1:]/M[:-1])
             new_sig = (sig[1:]+sig[:-1])*0.5
@@ -114,7 +83,7 @@ def hmf_camb(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h
                 return -ra2*ra3
         else:
             nM = np.array([0.999*M, 1.001*M])
-            sig = sigma_camb(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb)
+            sig = sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)
             dlsig = np.log(sig[1:] / sig[:-1])
             dlM = np.log(nM[1:] / nM[:-1])
             new_sig = (sig[1:] + sig[:-1]) * 0.5
@@ -140,9 +109,9 @@ def hmf_camb(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h
 
 '''M = np.logspace(11,15, 100)
 z = np.array([0, 0.5, 2, 4])
-y1 = hmf_camb(M, z, kmax=50, prec=100, out='dn/dlnM')
+y1 = hmf(M, z, kmax=50, prec=100, out='dn/dlnM')
 for i in range(4):
-    plt.loglog(M[1:], y1[i,:], label='CAMB  z='+str(z[i]))
+    plt.loglog(M[1:], y1[i,:], label='Analytic  z='+str(z[i]))
     plt.loglog(M[1:], mass_function.massFunction(M[1:], z[i], model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 15)
@@ -152,6 +121,7 @@ plt.xlim(1.5e11, 9e14)
 plt.legend()
 plt.show()'''
 
+
 ##############################"---------------------HMF sig8 evolution---------------------#############################
 
 '''M = np.logspace(11,16, 100)
@@ -159,8 +129,8 @@ sigma8 = [0.6,0.7,0.8,0.9,1,1.1]
 for el in sigma8:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    y1 = hmf_camb(M, z=[0], sig8=el, out='dn/dlnM')
-    plt.loglog(M[1:], y1, label='CAMB  $\sigma_8=$'+str(el))
+    y1 = hmf(M, z=0, sig8=el, out='dn/dlnM')
+    plt.loglog(M[1:], y1, label='Analytic  $\sigma_8=$'+str(el))
     plt.loglog(M[1:], mass_function.massFunction(M[1:], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 15)
@@ -177,8 +147,8 @@ omv = [0.1,0.3,0.5,0.7]
 for el in omv:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    y1 = hmf_camb(M, z=[0], om0=el, ol0=1-el, out='dn/dlnM')
-    plt.loglog(M[1:], y1, label='CAMB  $\Omega_m=$'+str(el))
+    y1 = hmf(M, z=0, om0=el, ol0=1-el, out='dn/dlnM')
+    plt.loglog(M[1:], y1, label='Analytic  $\Omega_m=$'+str(el))
     plt.loglog(M[1:], mass_function.massFunction(M[1:], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 15)
@@ -187,7 +157,6 @@ plt.ylim(0.004, 1e-7)
 plt.title('Press and Schechter multiplicity function', size = 15)
 plt.legend()
 plt.show()'''
-
 
 
 
@@ -201,13 +170,9 @@ plt.show()'''
 def fps(nu):
     return np.sqrt(2/np.pi)*nu*np.exp(-nu**2/2)
 
-def nu(M, z=0, h=0.67, om0=omega_m0, ol0=omega_l0, omb=omb, sig8 = sigma8, win='Gauss' ):
-    return delta_c(z, om0, ol0)/sigma_a_M(M, z=z, sig8=sig8, h=h, om0=om0, omb=omb, window=win)
-
-
-def nu_camb(M, z=[0], om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000 ):
-    return delta_c(z[0], om0, ol0)/sigma_camb(M, sig8, h,
-                                              kmax, z, window, 'M', prec, om0, ol0, omb)
+def nu(M, z=[0], om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, camb=False ):
+    return delta_c(z[0], om0, ol0)/sigma(M, sig8, h,
+                                              kmax, window, 'M', prec, om0, ol0, omb, camb)
 
 
 ################-------------------Peak Heigh CAMB-COLOSSUS COMPARISON------------###################################
@@ -216,9 +181,9 @@ z = [0, 1, 2, 4]
 my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
 cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 for el in z:
-    nu1 = nu_camb(M, z=[el])
+    nu1 = nu(M, z=[el])
     nu2 = peaks.peakHeight(M, z=el)
-    plt.loglog(M, nu1, label='CAMB  z='+str(el))
+    plt.loglog(M, nu1, label='Analytic  z='+str(el))
     plt.loglog(M, nu2,'--', label='COLOSSUS')
 plt.xlabel('M [$M_\odot/h$]', size=15)
 plt.ylabel(r'$\nu$', size=15)
@@ -229,11 +194,11 @@ plt.show()'''
 '''M = np.logspace(9, 17, 1000)
 sig8 = [0.4, 0.6, 0.8, 1, 1.2]
 for el in sig8:
-    nu1 = nu_camb(M, z=[0], sig8=el)
+    nu1 = nu(M, z=[0], sig8=el)
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     nu2 = peaks.peakHeight(M, z=0)
-    plt.loglog(M, nu1, label='CAMB  $\sigma_8$='+str(el))
+    plt.loglog(M, nu1, label='Analytic  $\sigma_8$='+str(el))
     plt.loglog(M, nu2,'--', label='COLOSSUS')
 plt.xlabel('M [$M_\odot/h$]', size=15)
 plt.ylabel(r'$\nu$', size=15)
@@ -244,11 +209,11 @@ plt.show()'''
 '''M = np.logspace(9, 17, 1000)
 omegam = [0.1, 0.2, 0.3, 0.4, 0.5]
 for el in omegam:
-    nu1 = nu_camb(M, z=[0], om0=el, ol0=1-el)
+    nu1 = nu(M, z=[0], om0=el, ol0=1-el)
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': 0.81, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     nu2 = peaks.peakHeight(M, z=0)
-    plt.loglog(M, nu1, label='CAMB  $\Omega_m$='+str(el))
+    plt.loglog(M, nu1, label='Analytic  $\Omega_m$='+str(el))
     plt.loglog(M, nu2,'--', label='COLOSSUS')
 plt.xlabel('M [$M_\odot/h$]', size=15)
 plt.ylabel(r'$\nu$', size=15)
@@ -266,7 +231,7 @@ plt.show()'''
 '''M = np.logspace(11,16, 100)
 z = [0, 2, 4]
 for el in z:
-    y1 = fps(nu_camb(M, z=[el], kmax=50, prec=200))
+    y1 = fps(nu(M, z=[el], kmax=50, prec=200))
     y2 = mass_function.massFunction(M, z=el, model='press74')
     plt.loglog(M, y1, label = 'z='+str(el))
     plt.loglog(M, y2, '--', label = ' Colossus')
@@ -331,18 +296,10 @@ plt.show()'''
 ########################################################################################################################
 
 
-
-def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=0.67, om0=omega_m0, ol0=omega_l0,
-          omb=omb, sigma8 = sigma8, win='Gauss'):
+def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb, sigma8 = sigma8,
+               prec = 1000, kmax=100, win='TopHat', camb=False):
     mass = np.logspace(lMmin, lMmax, npoints)
-    res = nu(mass, z=z, h=h, om0=om0, ol0=ol0, omb=omb, sig8 = sigma8, win=win )
-    return np.min(mass[res>1])
-
-
-def Mstar_camb(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb, sigma8 = sigma8,
-               prec = 1000, kmax=100, win='TopHat'):
-    mass = np.logspace(lMmin, lMmax, npoints)
-    res = nu_camb(mass, [z], om0, ol0, omb, sigma8,h, kmax, win, prec)
+    res = nu(mass, [z], om0, ol0, omb, sigma8,h, kmax, win, prec, camb)
     return np.min(mass[res>1])
 
 
@@ -356,8 +313,8 @@ my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'si
 cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 Ms_co = peaks.nonLinearMass(zs)
 for el in zs:
-    res.append(Mstar_camb(z=el, npoints=1000, kmax=100))
-plt.loglog(1+zs, res, label='CAMB')
+    res.append(Mstar(z=el, npoints=1000, kmax=100))
+plt.loglog(1+zs, res, label='Analytic')
 plt.loglog(1+zs, Ms_co, label='Colossus')
 plt.xlabel('z', size = 15)
 plt.ylabel('$M^\star$[$h^{-1}M_\odot$]', size = 15)
@@ -374,9 +331,9 @@ res2 = []
 for el in om:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    res.append(Mstar_camb(z=0, om0=el, ol0=1-el, npoints=300, kmax=5))
+    res.append(Mstar(z=0, om0=el, ol0=1-el, npoints=300, kmax=5))
     res2.append(peaks.nonLinearMass(0))
-plt.plot(om, res, '-g', label='CAMB')
+plt.plot(om, res, '-g', label='Analytic')
 plt.plot(om, res2, '--k', label='Colossus')
 plt.yscale('log')
 plt.xlabel('$\Omega_m$', size = 15)
@@ -394,9 +351,9 @@ res2 = []
 for el in s8:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    res.append(Mstar_camb(z=0, sigma8=el, om0=om, ol0=oml, npoints=300, kmax=50))
+    res.append(Mstar(z=0, sigma8=el, om0=om, ol0=oml, npoints=300, kmax=50))
     res2.append(peaks.nonLinearMass(0))
-plt.plot(s8, res, '-g', label='CAMB')
+plt.plot(s8, res, '-g', label='Analytic')
 plt.plot(s8, res2, '--k', label = 'Colossus')
 plt.yscale('log')
 plt.xlabel('$\sigma_8$', size = 15)
@@ -416,7 +373,7 @@ sig8 = np.linspace(0.4, 1.5, sze)
 nom = np.zeros((sze,sze))
 for i in range(sze):
     for j in range(sze):
-        nom[i,j] = Mstar_camb(lMmin=1, lMmax=18,  z=0, om0 = omv[i], ol0=1-omv[i], sigma8=sig8[j],
+        nom[i,j] = Mstar(lMmin=1, lMmax=18,  z=0, om0 = omv[i], ol0=1-omv[i], sigma8=sig8[j],
                               npoints=1000, prec=100, kmax=100)
 plt.contourf(omv, sig8, np.log10(nom), levels=100, cmap='jet')
 plt.xlabel('$\Omega_m$', size = 15)
@@ -454,21 +411,14 @@ plt.show()'''
 
 
 
-def number_density(M, z=0, window='Gauss', sigma8=sigma8, om0=omega_m0, ol0=omega_l0, h=h):
+def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=300, camb=False):
     def dn(x):
-        return hmf(x, z, window, sigma8, om0, ol0, h, omb=0.048)
-    return quad(dn, M, np.inf)[0]
-
-
-
-def nofm_CAMB(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=300):
-    def dn(x):
-        return np.exp(x)*hmf_camb(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf')
+        return np.exp(x)*hmf(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
     return quad(dn, np.log(M), lMmax*np.log(10))[0]
 
 
-def nofm_camb_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
-                     prec=100, acc=np.int(1e4), Colos=False):
+def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
+                     prec=100, acc=np.int(1e4), Colos=False, camb=False):
     Ms = np.logspace(np.log10(M), lMmax, acc)
     dlM = np.log(10)*(lMmax-np.log10(M))/acc
 
@@ -478,12 +428,12 @@ def nofm_camb_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=
         y = mass_function.massFunction(Ms, z, model='press74', q_out='dndlnM')
         return np.sum(y*dlM)
     elif type(z) == np.ndarray:
-        y = hmf_camb(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf')
+        y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
         l, m = y.shape
         mat_Ms = np.array([Ms[1:]]*l)
         return np.sum(mat_Ms*dlM*y, axis=1)
     else:
-        y = hmf_camb(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf')
+        y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
         return np.sum(Ms[1:]*dlM*y)
 
 
@@ -504,7 +454,7 @@ nom = np.zeros((size,size))
 mt = 4e13
 for i in range(size):
     for j in range(size):
-        nom[i,j] = np.log10(nofm_CAMB_manual(mt, lMmax= 18, sigma8=sig8[j], om0=omv[i], ol0=olv[i],
+        nom[i,j] = np.log10(nofm_manual(mt, lMmax= 18, sigma8=sig8[j], om0=omv[i], ol0=olv[i],
                                              kmax=5, prec=100, Colos=False))
 plt.contourf(omv, sig8, nom, levels=60, cmap='jet')
 plt.xlabel('$\Omega_m$', size = 15)
@@ -525,18 +475,18 @@ plt.show()'''
 
 
 def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,prec=100,
-      acc=np.int(1e4), Colos=False, differential=True, z2=None, prec2=None):
+      acc=np.int(1e4), Colos=False, differential=True, z2=None, prec2=None, camb=False):
     cosmo = LambdaCDM(H0=100 * h, Om0=om0, Ode0=ol0, Ob0=omb)
 
     if differential:
         vol = cosmo.differential_comoving_volume(z).value * h ** 3
-        Ntot = nofm_camb_man(M, lMmax, z, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos)
+        Ntot = nofm_man(M, lMmax, z, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos, camb)
         return Ntot*solid_angle*vol
     else:
         zs = np.linspace(z, z2, prec2)
         vol = cosmo.differential_comoving_volume(zs).value * h ** 3
         dz = (z2-z)/prec2
-        Nofz = nofm_camb_man(M, lMmax, zs, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos=False)
+        Nofz = nofm_man(M, lMmax, zs, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos=False, camb=camb)
         return np.sum(Nofz*vol)*dz*solid_angle
 
 
