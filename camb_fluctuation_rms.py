@@ -1,5 +1,4 @@
 from __future__ import division
-import matplotlib.pyplot as plt
 from cosmo_parameters import *
 import camb
 from camb import model
@@ -17,7 +16,7 @@ def W_th(k, R):
 
 def W_gauss(k, R):
     """Smoothing window function in fourier space.
-         Type : Gaussia,"""
+         Type : Gaussian"""
     return np.exp(-(k * R) ** 2 / 2)
 
 
@@ -28,7 +27,7 @@ def W_ksharp(k, R):
 
 
 
-#################################--------------------POWER SPECTRUM-----------------####################################
+#################################------------------CAMB POWER SPECTRUM-----------------####################################
 
 def camb_power_spectrum(h=h, ombh2=ombh2, omch2=omch2, ns=ns, sig8=sigma8, kmin = 2e-5, kmax=100, linear=True,
                         npoints=1000, nonlinear=False, omk=0.0, cosmomc_theta=None, thetastar=None,
@@ -77,6 +76,7 @@ def Delta_camb(k, h=h, omb=omb, om0=om, ns=ns, sig8=sigma8, omk=0.0, cosmomc_the
                         meffsterile=0.0, standard_neutrino_neff=3.046, TCMB=2.7255,
                         tau=None, deltazrei=None, Alens=1.0, bbn_predictor=None,
                         theta_H0_range=[10, 100]):
+
     if type(k) == list or type(k) == np.ndarray:
         kmin = np.min(k)
         kmax = np.max(k)
@@ -107,7 +107,9 @@ def Delta_camb(k, h=h, omb=omb, om0=om, ns=ns, sig8=sigma8, omk=0.0, cosmomc_the
 
 
 
-'''ks = np.logspace(-3, 2, 10000)
+'''
+import matplotlib.pyplot as plt
+ks = np.logspace(-3, 2, 10000)
 y = Delta_camb(ks, sig8=sigma8)**2
 y2 = cosmo.matterPowerSpectrum(ks)*ks**3/(2*np.pi**2)
 plt.loglog(ks, y, label='CAMB')
@@ -182,7 +184,9 @@ def sigma_camb(x, sig8=sigma8, h=h, kmax=30, window='TopHat', xin='M', prec=1000
             return sigma_camb_R(R, sig8, h, omb, om0, ol0, ns, kmax, prec, W_ksharp)
 
 
-'''ks = np.logspace(1, 2, 10)
+'''
+import matplotlib.pyplot as plt
+ks = np.logspace(1, 2, 10)
 R = 8
 res = []
 for el in ks:
@@ -195,7 +199,8 @@ plt.show()'''
 
 #############################-------------------Comparison with Colossus-----------------###############################
 
-'''R = 10**np.arange(-3 , 2.4, 0.005)
+'''import matplotlib.pyplot as plt
+R = 10**np.arange(-3 , 2.4, 0.005)
 sigma_tophat = cosmo.sigma(R, 0.0)
 sigma_sharpk = cosmo.sigma(R, 0.0, filt = 'sharp-k')
 sigma_gaussian = cosmo.sigma(R, 0.0, filt = 'gaussian')
@@ -217,7 +222,8 @@ plt.show()'''
 
 
 
-'''R = 10**np.arange(-3 , 2.4, 0.005)
+'''import matplotlib.pyplot as plt
+R = 10**np.arange(-3 , 2.4, 0.005)
 yc2 = cosmo.sigma(R, 0.0)
 yc3 = cosmo.sigma(R, 0.0, filt = 'sharp-k')
 yc1 = cosmo.sigma(R, 0.0, filt = 'gaussian')
@@ -238,7 +244,8 @@ plt.show()'''
 
 #################------------------------Evolution with redshift comparison ------------------#################
 
-'''z = [0, 1, 2, 4]
+'''import matplotlib.pyplot as plt
+z = [0, 1, 2, 4]
 R = 10**np.arange(-2, 2.4, 0.005)
 for el in z:
     yc2 = cosmo.sigma(R, el)
@@ -252,7 +259,8 @@ plt.show()'''
 
 #############------------------------Evolution with sigma8----------------------##############################
 
-'''s8 = np.arange(0.4, 1.6, 0.2)
+'''import matplotlib.pyplot as plt
+s8 = np.arange(0.4, 1.6, 0.2)
 R = 10**np.arange(-2, 2.4, 0.005)
 for el in s8:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': 0.048, 'sigma8':el, 'ns': ns}
@@ -269,7 +277,8 @@ plt.show()'''
 
 #############-------------------Evolution with omega_m-----------------------------###########################
 
-'''omg = np.arange(0.1, 0.9, 0.2)
+'''import matplotlib.pyplot as plt
+omg = np.arange(0.1, 0.9, 0.2)
 R = 10**np.arange(-2, 2.4, 0.005)
 for el in omg:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': oml, 'Ob0': 0.048, 'sigma8': 0.8, 'ns': ns}
@@ -283,7 +292,8 @@ plt.ylabel('$\sigma(R)$', size=15)
 plt.legend()
 plt.show()'''
 
-'''omg = np.arange(0.1, 0.7, 0.1)
+'''import matplotlib.pyplot as plt
+omg = np.arange(0.1, 0.7, 0.1)
 k = np.logspace(-3, 2, 1000)
 for el in omg:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': cosmo.Ob0, 'sigma8': 0.8102, 'ns': 0.9665,'relspecies' : True, 'Tcmb0' : 2.7255, 'Neff' : 3.0460}
