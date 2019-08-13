@@ -20,32 +20,49 @@ cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 
 
 def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000, out='hmf', camb=False):
-    if type(z)==np.ndarray:
+    """
+
+    :param M: float or array: mass or array of mass. If array, minimum size = 3.
+    :param z: float : redshift or array of redshifts. default = 0.
+    :param window: str : type of smoothing window function. either "TopHat", "Gauss" or k-Sharp'
+    :param sig8: float : sigma 8 cosmo parameter
+    :param om0: float : fraction matter density
+    :param ol0: float : fraction dark energy density
+    :param omb: float : fraction baryon density
+    :param h: float : H0/100 cosmo parameter
+    :param kmax: float or int : maximum wavenumber for CAMB power spectrum.
+    :param prec: int : number of bins for integral calculations
+    :param out: str : type of output. Either "hmf" for number density per unit mass. or "dn/dlnM" or "dimensionless"
+    :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
+    :return: float, array of floats.
+    """
+    if type(z)==np.ndarray:   #case multiple redshifts
         l = len(z)
-        del_c = delta_c(z, om0, ol0)  #shape (l, )
+        del_c = delta_c(z, om0, ol0)  #critical density array shape (l, )
 
-        if type(M) == np.ndarray or type(M) == list:
-            n = len(M)-2
-            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) #shape : (n, )
-            dlsig = np.log(sig[2:] / sig[:-2])            #shape : (n-2, )
-            dlM = np.log(M[2:] / M[:-2])        #shape : (n-2, )
-            new_sig = (sig[2:] + sig[:-2]) * 0.5    #shape : (n-2, )
-            new_m = (M[2:] + M[:-2]) * 0.5        #shape : (n-2, )
+        if type(M) == np.ndarray or type(M) == list:   #case M is an array
+            n = len(M)-2                               # n - 2 because we will do a derivative
+            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) # array of fluctiation rmsshape : (n,)
+            dlsig = np.log(sig[2:] / sig[:-2])            # differential of sigma. shape : (n-2, )
+            dlM = np.log(M[2:] / M[:-2])        # differential of mass shape : (n-2, )
+            new_sig = (sig[2:] + sig[:-2]) * 0.5    #averaging to get the same size as dlsig. shape : (n-2, )
+            new_m = (M[2:] + M[:-2]) * 0.5        # averaging to get the same size as dlM shape : (n-2, )
 
-            mat_new_m = np.array([new_m]*l)  #shape (l, n-2)
-            mat_new_sig = np.array([new_sig] * l)  #shape (l, n-2)
-            mat_del_c = np.array([del_c]*n).transpose()  #shape (l, n-2)
+            mat_new_m = np.array([new_m]*l)  #duplicating array of mass shape (l, n-2)
+            mat_new_sig = np.array([new_sig] * l)  #duplicating array of sigma shape (l, n-2)
+            mat_del_c = np.array([del_c]*n).transpose()  #duplicating array of critical density shape (l, n-2)
 
-            ra1 = rho_m(z=0, om0=om0) / mat_new_m ** 2        #shape : (l, n-2 )
+            ra1 = rho_m(z=0, om0=om0) / mat_new_m ** 2        #part 1 of Press and Schechter hmf shape : (l, n-2 )
+            #part 2 of PS : multiplicity function shape : (l, n-2)
             ra2 = np.exp(-mat_del_c ** 2 / (2 * mat_new_sig ** 2)) * np.sqrt(2 / np.pi) * mat_del_c / mat_new_sig
-            ra3 = np.array([dlsig / dlM]*l)
+            ra3 = np.array([dlsig / dlM]*l)  #part 3 of Press and Schechter hmf
             if out == 'hmf':
-                return -ra1 * ra2 * ra3
+                return -ra1 * ra2 * ra3  #number density of halos per unit M
             elif out == 'dn/dlnM':
-                return -mat_new_m * ra1 * ra2 * ra3
+                return -mat_new_m * ra1 * ra2 * ra3  #number density of halos per unit logM
             elif out == 'dimensionless':
-                return -ra2 * ra3
-        else:
+                return -ra2 * ra3    #multiplicity function
+        else:    #case of unique M
             nM = np.array([0.99999 * M, 1.00001 * M])
             sig = sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)
             dlsig = np.log(sig[1:] / sig[:-1])
@@ -63,7 +80,7 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
                 return -new_m * ra1 * ra2 * ra3
             elif out == 'dimensionless':
                 return -ra2 * ra3
-    else:
+    else: #case of unique z
         del_c = delta_c(z, om0, ol0)
         if type(M) == np.ndarray or type(M) == list:
             sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)
@@ -107,7 +124,7 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
 '''import matplotlib.pyplot as plt
 M = np.logspace(11,15, 100)
 z = np.array([0, 0.5, 2, 4])
-y1 = hmf2(M, z, kmax=50, prec=100, out='dn/dlnM')
+y1 = hmf(M, z, kmax=50, prec=100, out='dn/dlnM')
 for i in range(4):
     plt.loglog(M[1:-1], y1[i,:], label='Analytic  z='+str(z[i]))
     plt.loglog(M[1:-1], mass_function.massFunction(M[1:-1], z[i], model='press74', q_out='dndlnM'), '--', label='Colossus')
@@ -129,8 +146,8 @@ for el in sigma8:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y1 = hmf(M, z=0, sig8=el, out='dn/dlnM')
-    plt.loglog(M[1:], y1, label='Analytic  $\sigma_8=$'+str(el))
-    plt.loglog(M[1:], mass_function.massFunction(M[1:], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
+    plt.loglog(M[1:-1], y1, label='Analytic  $\sigma_8=$'+str(el))
+    plt.loglog(M[1:-1], mass_function.massFunction(M[1:-1], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 15)
 plt.xlim(5e12, 6e15)
@@ -148,8 +165,8 @@ for el in omv:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y1 = hmf(M, z=0, om0=el, ol0=1-el, out='dn/dlnM')
-    plt.loglog(M[1:], y1, label='Analytic  $\Omega_m=$'+str(el))
-    plt.loglog(M[1:], mass_function.massFunction(M[1:], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
+    plt.loglog(M[1:-1], y1, label='Analytic  $\Omega_m=$'+str(el))
+    plt.loglog(M[1:-1], mass_function.massFunction(M[1:-1], 0, model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 15)
 plt.xlim(5e12, 6e15)
@@ -168,11 +185,41 @@ plt.show()'''
 
 
 def fps(nu):
+    """
+    Press and Schechter Multiplicty function
+    :param nu: float or array of floats : peak height
+    :return: float or array of floats.
+    """
     return np.sqrt(2/np.pi)*nu*np.exp(-nu**2/2)
 
-def nu(M, z=[0], om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, camb=False ):
-    return delta_c(z[0], om0, ol0)/sigma(M, sig8, h,
-                                              kmax, window, 'M', prec, om0, ol0, omb, camb)
+def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, camb=False ):
+    """
+    peak height from press and schechter 74. delta_c/sigma
+    :param M: float or array of floats : mass
+    :param z: float or array of floats : redshifts
+    :param window: str : type of smoothing window function. either "TopHat", "Gauss" or k-Sharp'
+    :param sig8: float : sigma 8 cosmo parameter
+    :param om0: float : fraction matter density
+    :param ol0: float : fraction dark energy density
+    :param omb: float : fraction baryon density
+    :param h: float : H0/100 cosmo parameter
+    :param kmax: float or int : maximum wavenumber for CAMB power spectrum.
+    :param prec: int : number of bins for integral calculations
+    :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
+
+    :return: peak height
+    """
+    del_c = delta_c(z, om0, ol0)  #critical overdensity
+    sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb)  #fluctuation rms
+    if (type(z)==np.ndarray) and (type(M)==np.ndarray):   #case multiple redshifts and mass
+        l = len(z)
+        n = len(M)
+        mat_del_c = np.array([del_c]*n)   #duplicating arrays to do vectorial calculations
+        mat_sig = np.array([sig]*l).transpose() #duplicating arrays to do vectorial calculations
+        return mat_del_c/mat_sig
+    else:
+        return del_c/sig
+
 
 
 ################-------------------Peak Heigh CAMB-COLOSSUS COMPARISON------------###################################
@@ -182,7 +229,7 @@ z = [0, 1, 2, 4]
 my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
 cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 for el in z:
-    nu1 = nu(M, z=[el])
+    nu1 = nu(M, z=el)
     nu2 = peaks.peakHeight(M, z=el)
     plt.loglog(M, nu1, label='Analytic  z='+str(el))
     plt.loglog(M, nu2,'--', label='COLOSSUS')
@@ -191,12 +238,12 @@ plt.ylabel(r'$\nu$', size=15)
 plt.legend()
 plt.show()'''
 
-
+######################-------------------------sigma 8---------------------------------#################################
 '''import matplotlib.pyplot as plt
 M = np.logspace(9, 17, 1000)
 sig8 = [0.4, 0.6, 0.8, 1, 1.2]
 for el in sig8:
-    nu1 = nu(M, z=[0], sig8=el)
+    nu1 = nu(M, z = 0, sig8=el)
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     nu2 = peaks.peakHeight(M, z=0)
@@ -207,13 +254,13 @@ plt.ylabel(r'$\nu$', size=15)
 plt.legend()
 plt.show()'''
 
-
+######################################-----------------Omega m---------------------------###############################
 '''import matplotlib.pyplot as plt
 M = np.logspace(9, 17, 1000)
 omegam = [0.1, 0.2, 0.3, 0.4, 0.5]
 for el in omegam:
-    nu1 = nu(M, z=[0], om0=el, ol0=1-el)
-    my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': 0.81, 'ns': ns}
+    nu1 = nu(M, z=0, om0=el, ol0=1-el)
+    my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     nu2 = peaks.peakHeight(M, z=0)
     plt.loglog(M, nu1, label='Analytic  $\Omega_m$='+str(el))
@@ -235,7 +282,7 @@ plt.show()'''
 M = np.logspace(11,16, 100)
 z = [0, 2, 4]
 for el in z:
-    y1 = fps(nu(M, z=[el], kmax=50, prec=200))
+    y1 = fps(nu(M, z=el, kmax=50, prec=200))
     y2 = mass_function.massFunction(M, z=el, model='press74')
     plt.loglog(M, y1, label = 'z='+str(el))
     plt.loglog(M, y2, '--', label = ' Colossus')
@@ -253,8 +300,8 @@ plt.show()'''
 M = np.logspace(13,17, 100)
 sigma8 = [0.6, 0.8,1, 1.2]
 for el in sigma8:
-    y1 = fps(nu(M, z=0, sig8 = el, win='TopHat'))
-    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': om0, 'Ob0': 0.043, 'sigma8': el, 'ns': ns}
+    y1 = fps(nu(M, z=0, sig8 = el))
+    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': om, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y2 = fps(peaks.peakHeight(M, z= 0))
     #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
@@ -275,8 +322,8 @@ plt.show()'''
 M = np.logspace(13,17, 100)
 om1 = [0.1, 0.3, 0.5, 0.7]
 for el in om1:
-    y1 = fps(nu(M, z=0, om0=el, ol0=1-el,  sig8 = 0.8154, win='TopHat'))
-    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': el, 'Ode0' : 1-el, 'Ob0': 0.043, 'sigma8': 0.8154, 'ns': ns}
+    y1 = fps(nu(M, z=0, om0=el, ol0=1-el,  sig8 = sigma8))
+    my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': el, 'Ode0' : 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y2 = fps(peaks.peakHeight(M, z= 0))
     #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
@@ -303,10 +350,33 @@ plt.show()'''
 
 
 def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb, sigma8 = sigma8,
-               prec = 1000, kmax=100, win='TopHat', camb=False):
+               prec = 1000, kmax=100, window='TopHat', camb=False):
+    """
+    Caracteristic non-linear mass
+    :param lMmin: float : log lower mass limit
+    :param lMmax: float : log lower mass limit
+    :param npoints: int : number of mass subdivision
+    :param z: float : redshift
+    :param window: str : type of smoothing window function. either "TopHat", "Gauss" or k-Sharp'
+    :param sigma8: float : sigma 8 cosmo parameter
+    :param om0: float : fraction matter density
+    :param ol0: float : fraction dark energy density
+    :param omb: float : fraction baryon density
+    :param h: float : H0/100 cosmo parameter
+    :param kmax: float or int : maximum wavenumber for CAMB power spectrum.
+    :param prec: int : number of bins for integral calculations
+    :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
+    :return: float : caracteristic non linear mass
+    """
     mass = np.logspace(lMmin, lMmax, npoints)
-    res = nu(mass, [z], om0, ol0, omb, sigma8,h, kmax, win, prec, camb)
-    return np.min(mass[res>1])
+    res = nu(mass, z, om0, ol0, omb, sigma8,h, kmax, window, prec, camb)
+    if type(z) == np.ndarray:
+        l = len(z)           #res shape (n x l)
+        mat_mass = np.array([mass]*l).transpose()
+        new_mass = np.where(res>1, mat_mass, np.inf)
+        return np.min(new_mass, axis=0)
+    else:
+        return np.min(mass[res>1])
 
 
 
@@ -315,12 +385,10 @@ def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb
 
 '''import matplotlib.pyplot as plt
 zs = np.linspace(0, 4, 50)
-res = []
 my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
 cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
 Ms_co = peaks.nonLinearMass(zs)
-for el in zs:
-    res.append(Mstar(z=el, npoints=1000, kmax=100))
+res = Mstar(z=zs, npoints=1000, kmax=100)
 plt.loglog(1+zs, res, label='Analytic')
 plt.loglog(1+zs, Ms_co, label='Colossus')
 plt.xlabel('z', size = 15)
@@ -415,9 +483,6 @@ plt.title('$\log M^\star$ Colossus')
 plt.show()'''
 
 
-
-
-
 ########################################################################################################################
 
 ########################----------------------- Integrated HMF N(>M) -----------------------############################
@@ -426,16 +491,59 @@ plt.show()'''
 
 
 
-def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=300, camb=False):
-    def dn(x):
-        return np.exp(x)*hmf(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
+def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
+         prec=300, Colos = False, camb=False):
+    """
+    Number density of halos more massive than M. Integrated using scipy quad
+    :param lMmax: float : upper bound limit for integration
+    :param M: float or array of floats : mass
+    :param z: float or array of floats : redshifts
+    :param window: str : type of smoothing window function. either "TopHat", "Gauss" or k-Sharp'
+    :param sigma8: float : sigma 8 cosmo parameter
+    :param om0: float : fraction matter density
+    :param ol0: float : fraction dark energy density
+    :param omb: float : fraction baryon density
+    :param h: float : H0/100 cosmo parameter
+    :param kmax: float or int : maximum wavenumber for CAMB power spectrum.
+    :param prec: int : number of bins for integral calculations
+    :param Colos : boolan : using Colossus halo mass function or not
+    :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
+
+    :return:
+    """
+    from scipy.integrate import quad
+    if Colos :
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
+        cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+        def dn(x):
+            return np.exp(x)*mass_function.massFunction(np.exp(x), z, model='press74', q_out='dndlnM')
+    else :
+        def dn(x):       #define function to integrate
+            return np.exp(x)*hmf(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
     return quad(dn, np.log(M), lMmax*np.log(10))[0]
 
 
 def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
                      prec=100, acc=np.int(1e4), Colos=False, camb=False):
-    Ms = np.logspace(np.log10(M), lMmax, acc)
-    dlM = np.log(10)*(lMmax-np.log10(M))/acc
+    """
+    Number density of halos more massive than M. Integrated using simple sum.
+    :param lMmax: float : upper bound limit for integration
+    :param M: float or array of floats : mass
+    :param z: float or array of floats : redshifts
+    :param window: str : type of smoothing window function. either "TopHat", "Gauss" or k-Sharp'
+    :param sigma8: float : sigma 8 cosmo parameter
+    :param om0: float : fraction matter density
+    :param ol0: float : fraction dark energy density
+    :param omb: float : fraction baryon density
+    :param h: float : H0/100 cosmo parameter
+    :param kmax: float or int : maximum wavenumber for CAMB power spectrum.
+    :param prec: int : number of bins for integral calculations in fluctuation rms
+    :param acc: int : number of bins for integral calculations in halo mass function
+    :param Colos : boolan : using Colossus halo mass function or not
+    :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
+    """
+    Ms = np.logspace(np.log10(M), lMmax, acc)   #array of mass
+    dlM = np.log(10)*(lMmax-np.log10(M))/acc    #differential in log mass
 
     if Colos :
         my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
@@ -445,11 +553,11 @@ def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, 
     elif type(z) == np.ndarray:
         y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
         l, m = y.shape
-        mat_Ms = np.array([Ms[1:]]*l)
+        mat_Ms = np.array([Ms[1:-1]]*l)
         return np.sum(mat_Ms*dlM*y, axis=1)
     else:
         y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
-        return np.sum(Ms[1:]*dlM*y)
+        return np.sum(Ms[1:-1]*dlM*y)
 
 
 
@@ -462,14 +570,13 @@ def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, 
 ##########################---------------Varying z ----------------------------------###################################
 
 '''import matplotlib.pyplot as plt
-onepluszs = np.logspace(0, np.log10(3), 30)
+onepluszs = np.logspace(0, np.log10(3), 10)
 size = 15
-sig8 = np.logspace(np.log10(0.5), np.log10(1.1), size)
-omv = np.logspace(np.log10(0.25), np.log10(0.5), size)
+sig8 = np.logspace(np.log10(0.7), np.log10(0.9), size)
+omv = np.logspace(np.log10(0.27), np.log10(0.33), size)
 x = np.array([omv]*size).transpose()
 y = np.array([sig8]*size)
 olv = 1 - omv
-# ombv = 0.13*omv
 
 nom = np.zeros((size, size))
 for el in onepluszs:
