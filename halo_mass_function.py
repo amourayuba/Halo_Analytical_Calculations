@@ -192,6 +192,19 @@ def fps(nu):
     """
     return np.sqrt(2/np.pi)*nu*np.exp(-nu**2/2)
 
+def nufnu_st(nu, A=0.322, a=0.707, p=0.3):
+    """
+    Multiplicity function times nu generalised using Sheth and Tormen. For a regular Press and Chechter A=1/2, a=1 p=0
+    :param nu: Peak height, delta_c/sigma
+    :param A: sheth and tormen parameter
+    :param a: sheth and tormen parameter
+    :param p: sheth and tormen parameter
+    :return:
+    :return:
+    """
+    nup = a*nu
+    return A*(1 + 1/nup**p)*fps(nup)
+
 def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, camb=False ):
     """
     peak height from press and schechter 74. delta_c/sigma
