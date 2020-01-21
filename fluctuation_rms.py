@@ -54,6 +54,8 @@ def Delta(k, sigma8=sigma8, h=h, om0=om, omb=omb, ns=ns):
     return np.sqrt(k**3*power_spectrum(k, sigma8, h, om0, omb, ns)/(2*np.pi**2))
 
 
+
+
 def camb_power_spectrum(h=h, ombh2=ombh2, omch2=omch2, ns=ns, sig8=sigma8, kmin = 2e-5, kmax=100, linear=True,
                         npoints=1000, nonlinear=False, omk=0.0, cosmomc_theta=None, thetastar=None,
                         neutrino_hierarchy='degenerate', num_massive_neutrinos=1, mnu=0.06, nnu=3.046, YHe=None,
@@ -215,6 +217,18 @@ def sigma(x, sig8=sigma8, h=h, kmax=30, window='TopHat', xin='M', prec=1000, om0
 
 
 '''import matplotlib.pyplot as plt
+k = np.logspace(-4, 2, 1000)
+y = Delta(k)**2
+plt.loglog(k, y, linewidth=3)
+plt.xlabel('k [$h Mpc^{-1}$]', size=25)
+plt.ylabel('$\Delta^2(k)$', size=25)
+plt.xticks(size=20)
+plt.yticks(size=20)
+plt.show()'''
+
+
+
+'''import matplotlib.pyplot as plt
 R = 10**np.arange(-3 , 2.4, 0.05)
 sigma_tophat = cosmo.sigma(R, 0.0)
 sigma_sharpk = cosmo.sigma(R, 0.0, filt = 'sharp-k')
@@ -235,6 +249,23 @@ plt.plot(R, y1, '-g', label = 'CAMB gaussian')
 plt.legend()
 plt.show()'''
 
+'''import matplotlib.pyplot as plt
+params = {'legend.fontsize': 20,
+          'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+for el in s8:
+    R = 10**np.arange(-3 , 2.4, 0.05)
+    sigma_tophat = cosmo.sigma(R, 0.0)
+    y1 = sigma_R(R, kmax=1000, Colos=False)
+    plt.xlabel('R [Mpc/h]', size=25)
+    plt.ylabel('$\sigma(R)$', size=25)
+    plt.loglog(R, sigma_tophat, linewidth = 3, label = 'My code')
+    plt.loglog(R, y1, linewidth=3, label = 'CAMB')
+plt.xticks(size=20)
+plt.yticks(size=20)
+plt.legend()
+plt.show()'''
 
 
 '''import matplotlib.pyplot as plt
@@ -272,7 +303,7 @@ plt.ylabel('$\sigma(R)$', size=15)
 plt.legend()
 plt.show()'''
 
-#############------------------------Evolution with sigma8----------------------##############################
+###################----------------------------Evolution with sigma8----------------------##############################
 
 '''import matplotlib.pyplot as plt
 s8 = np.arange(0.4, 1.6, 0.2)
@@ -290,27 +321,49 @@ plt.legend()
 plt.show()'''
 
 
-#############-------------------Evolution with omega_m-----------------------------###########################
+##################------------------------Evolution with omega_m-----------------------------###########################
 
 '''import matplotlib.pyplot as plt
-omg = np.arange(0.1, 0.9, 0.2)
-R = 10**np.arange(-2, 2.4, 0.005)
+import matplotlib.ticker as tkr
+formatter = tkr.FuncFormatter(lambda y, _: '{:.16g}'.format(y))
+
+#omg = np.arange(0.1, 0.9, 0.2)
+omg = [0.15, 0.3, 0.5, 0.7]
+s8 = [0.6, 0.8, 1, 1.2]
+#R = 10**np.arange(-2, 2.4, 0.005)
+M = np.logspace(8,15, 1000)
+fig, ax = plt.subplots()
 for el in omg:
-    my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': oml, 'Ob0': 0.048, 'sigma8': 0.8, 'ns': ns}
-    cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    yc2 = cosmo.sigma(R, 0)
-    y2 = sigma_R(R, om0= el, ol0=1-el, sig8 =  0.8, window=W_th, kmax=400)
-    plt.loglog(R, y2, label= '$\Omega_m$ = '+str(round(el, 1))+' Analytical')
-    plt.loglog(R, yc2, '--', label = 'Colossus')
-plt.xlabel('R [Mpc/h]', size=15)
-plt.ylabel('$\sigma(R)$', size=15)
-plt.legend()
+#    my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': oml, 'Ob0': 0.048, 'sigma8': 0.8, 'ns': ns}
+#    cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+#    yc2 = cosmo.sigma(R, 0)
+    y2 = sigma(M, xin='M', om0=el, ol0=1-el, sig8 = sigma8, kmax=400)
+    ax.loglog(M, y2, label= '$\Omega_m$ = '+str(el))
+#    plt.loglog(R, yc2, '--', label = 'Colossus')
+plt.xlabel('M [$M_\odot/h$]', size=20)
+#loc = [2, 5, 8]
+#famator = tkr.FixedFormatter(loc)
+#plt.xlabel('R [Mpc/h]', size=20)
+plt.xlim(10**8, 10**15)
+plt.ylim(0.6, 10)
+plt.xticks(size=15)
+plt.yticks(size=15)
+#ax.xaxis.set_major_formatter(formatter)
+ax.yaxis.set_major_formatter(formatter)
+#ax.yaxis.set_minor_formatter(famator)
+#ax.yaxis.set_minor_locator(lacator)
+#plt.ylabel('$\sigma(M)$', size=20)
+plt.ylabel('$\sigma(M)$', size=20)
+plt.legend(fontsize='x-large')
 plt.show()'''
 
 
 
 '''import matplotlib.pyplot as plt
-omg = np.arange(0.1, 0.7, 0.1)
+#params = {'legend.fontsize': 20,
+#          'legend.handlelength': 2}
+#plt.rcParams.update(params)
+omg = [0.3]
 k = np.logspace(-3, 2, 1000)
 for el in omg:
     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': cosmo.Ob0, 'sigma8': 0.8102, 'ns': 0.9665,'relspecies' : True, 'Tcmb0' : 2.7255, 'Neff' : 3.0460}
@@ -319,14 +372,47 @@ for el in omg:
     ombh2 = cosmo.Ob0 * h ** 2
     omh2 = el * h ** 2
     omch2 = omh2 - ombh2
-    kh, z, pk = camb_power_spectrum(z=[0], h=h, kmin= 1e-3, kmax=200, ombh2=ombh2, omch2=omch2, sig8=0.8102, npoints=1000, ns=ns, omk=0, nonlinear=False, linear=True)
-    yc2 = cosmo.matterPowerSpectrum(kh, 0)
-    #plt.loglog(kh, pk[0], label= '$\Omega_m$ = '+str(round(el, 1))+' CAMB')
-    #plt.loglog(k, yc2, '--', label = 'Colossus')
-    plt.plot(kh, (yc2-pk)/pk,  label= '$\Omega_m$ = '+str(round(el, 1)))
-plt.xlabel('R [Mpc/h]', size=15)
-plt.ylabel('$\Delta$P(k)', size=15)
-plt.xscale('log')
+    kh, z, pk = camb_power_spectrum(h=h, kmin= 1e-3, kmax=200, ombh2=ombh2, omch2=omch2, sig8=0.8102, npoints=1000, ns=ns, omk=0, nonlinear=False, linear=True)
+    yc2 = cosmo.matterPowerSpectrum(k, 0)
+    yc3 = power_spectrum(k, sigma8 = 0.8102, om0=el, omb=cosmo.Ob0, ns =0.9665 )
+    plt.loglog(kh , pk, label=  'CAMB')
+    plt.loglog(k, yc2, '--', label = 'Colossus')
+    plt.loglog(k, yc3, '-.', label = 'My code')
+    #plt.plot(kh, (yc2-pk)/pk,  label= '$\Omega_m$ = '+str(round(el, 1)))
+plt.xlabel('k [$h Mpc^{-1}$]', size=25)
+plt.ylabel('P(k)', size=25)
+plt.xticks(size=20)
+plt.yticks(size=20)
 plt.legend()
 plt.show()'''
 
+
+'''import matplotlib.pyplot as plt
+k = np.logspace(-4, 1, 1000)
+y = power_spectrum(k)
+plt.loglog(k, y)
+plt.xlabel('k $[hMpc^{-1}]$', size = 25)
+plt.ylabel('P(k)', size = 25)
+plt.xticks(size=20)
+plt.yticks(size=20)
+plt.show()'''
+
+'''import matplotlib.pyplot as plt
+params = {'legend.fontsize': 20,
+          'legend.handlelength': 2}
+plt.rcParams.update(params)
+R = np.logspace(-3, 2, 1000)
+
+oms = [0.15, 0.3, 0.5]
+for el in oms :
+    y = sigma(R, xin='R', om0=el)
+    plt.loglog(R, y, linewidth = 3, label = '$\Omega_m =$'+str(el))
+plt.ylabel('$\sigma$(R)', size = 25)
+plt.xlabel('R [$h^{-1}$Mpc]', size = 25)
+plt.xticks(size=20)
+plt.yticks(size=20)
+
+plt.legend()
+plt.xlim(1e-3, 1e2)
+plt.ylim(1e-1, 20)
+plt.show()'''
