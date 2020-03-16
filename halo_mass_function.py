@@ -23,7 +23,7 @@ def fps(nu):
     :param nu: float or array of floats : peak height
     :return: float or array of floats.
     """
-    return np.sqrt(2/np.pi)*np.exp(-nu**2/2)
+    return nu*np.sqrt(2/np.pi)*np.exp(-nu**2/2)
 
 def nufnu_st(nu, A=0.322, a=0.707, p=0.3):
     """
@@ -80,7 +80,7 @@ def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat
 
 
 def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000,
-        out='hmf', model = 'Sheth-Tormen', camb=False):
+        out='hmf', model = 'sheth', A=0.322, a=0.707, p=0.3, camb=False):
     """
 
     :param M: float or array: mass or array of mass. If array, minimum size = 3.
@@ -118,8 +118,8 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
             #part 2 of PS : multiplicity function shape : (l, n-2)
             nu = mat_del_c/mat_new_sig
             #ra2 = np.exp(-mat_del_c ** 2 / (2 * mat_new_sig ** 2)) * np.sqrt(2 / np.pi) * mat_del_c / mat_new_sig
-            if model == 'Sheth-Tormen':
-                ra2 = nufnu_st(nu)  #using sheth and tormen multiplicity function
+            if model == 'sheth':
+                ra2 = nufnu_st(nu, A, a, p)  #using sheth and tormen multiplicity function
             else:
                 ra2 = fps(nu)
             ra3 = np.array([dlsig / dlM]*l)  #part 3 of Press and Schechter hmf
@@ -137,8 +137,9 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
             new_sig = (sig[1:] + sig[:-1]) * 0.5  # taking the average as the value for sigma(M) to be symetric wr M
             new_m = (nM[1:] + nM[:-1]) * 0.5      #same. To be symmetric
             nu = del_c/new_sig                   #peak height
-            if model == 'Sheth-Tormen':
-                ra2 = nufnu_st(nu)    #using sheth and tormen multiplicity function
+            if model == 'sheth':
+
+                ra2 = nufnu_st(nu, A, a, p)    #using sheth and tormen multiplicity function
             else:
                 ra2 = fps(nu)         #Press and schechter multiplicity function
             ra1 = rho_m(z=0, om0=om0)/new_m ** 2     #density normalisation of the halo mass function
@@ -160,8 +161,8 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
             new_m = (M[2:]+M[:-2])*0.5  #same. To be symmetric
 
             nu = del_c/new_sig      #Peak height
-            if model == 'Sheth-Tormen':
-                ra2 = nufnu_st(nu) #using sheth and tormen multiplicity function
+            if model == 'sheth':
+                ra2 = nufnu_st(nu, A, a, p) #using sheth and tormen multiplicity function
             else:
                 ra2 = fps(nu) #Press and schechter multiplicity function
             ra1 = rho_m(z=0, om0=om0)/new_m**2 #density normalisation of the halo mass function
@@ -180,8 +181,8 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
             new_sig = (sig[1:] + sig[:-1]) * 0.5 # taking the average as the value for sigma(M) to be symetric wr M
             new_m = (nM[1:] + nM[:-1]) * 0.5  #same. To be symmetric
             nu = del_c/new_sig       #peak height
-            if model == 'Sheth-Tormen':
-                ra2 = nufnu_st(nu)  #using sheth and tormen multiplicity function
+            if model == 'sheth':
+                ra2 = nufnu_st(nu, A, a, p)  #using sheth and tormen multiplicity function
             else:
                 ra2 = fps(nu)     #Press and schechter multiplicity function
 
@@ -203,22 +204,30 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
 params = {'legend.fontsize': 20,
           'legend.handlelength': 2}
 plt.rcParams.update(params)
-M = np.logspace(8,15, 100)
+M = np.logspace(7,15, 100)
 z = np.array([0, 0.5, 2, 4])
 oms = [0.15, 0.3, 0.5]
 s8 = [0.6, 0.8, 1]
-for el in s8:
-    y1 = hmf(M, z=0, sig8=el, kmax=50, prec=100, out='dndlnM')
+#for el in s8:
+for el in oms:
+    y1 = hmf(M, z=0, om0=el, sig8=0.8, kmax=50, prec=100, model='press', out='dndlnM')
+    y2 = hmf(M, z=0, om0=el, sig8=0.8, kmax=50, prec=100, model='sheth', out='dndlnM')
+    #y1 = hmf(M, z=0, om0=0.3, sig8=el, kmax=50, prec=100, model='press', out='dimensionless')
+    #y2 = hmf(M, z=0, om0=0.3, sig8=el, kmax=50, prec=100, model='sheth', A=0.5, a=1, p=0, out='dndlnM')
 #    for i in range(4):
-    plt.loglog(M[1:-1], y1, label='$\sigma_8$='+str(el), linewidth = 3)
+    #plt.loglog(M[1:-1], y1, label='$\sigma_8$='+str(el), linewidth = 3)
+    #plt.loglog(M[1:-1], y1, label='$\Omega_m$='+str(el)+' PS', linewidth = 2)
+    #plt.loglog(M[1:-1], y2, '--', label='$\Omega_m$=' + str(el)+ ' ST', linewidth=1)
+    plt.loglog(M[1:-1], y1, label='$\Omega_m$='+str(el)+' PS', linewidth = 2)
+    plt.loglog(M[1:-1], y2, '--', label='$\Omega_m$=' + str(el)+ ' ST', linewidth=2)
 #    plt.loglog(M[1:-1], mass_function.massFunction(M[1:-1], z[i], model='press74', q_out='dndlnM'), '--', label='Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 25)
-plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 18)
+plt.ylabel('dn/dlnM [$h^3/Mpc^{3}$]', size = 25)
 plt.xticks(size=20)
 plt.yticks(size=20)
 #plt.title('Press and Schechter halo mass function', size = 15)
-plt.ylim(1e-6, 0.1)
-plt.xlim(1.5e11, 1e15)
+#plt.ylim(1e-6, 0.1)
+#plt.xlim(1.5e5, 1e8)
 
 plt.legend()
 plt.show()'''
@@ -440,20 +449,20 @@ plt.show()'''
 ###############"-------------------Multiplicity compaarison with colossus sig8 evolution----------------################
 
 '''import matplotlib.pyplot as plt
-M = np.logspace(13,17, 100)
-sigma8 = [0.6, 0.8,1, 1.2]
+M = np.logspace(7,16, 100)
+sigma8 = [0.6, 0.8, 1]
 for el in sigma8:
     y1 = fps(nu(M, z=0, sig8 = el))
     my_cosmo = {'flat': True, 'H0': 100*h, 'Om0': om, 'Ob0': omb, 'sigma8': el, 'ns': ns}
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y2 = fps(peaks.peakHeight(M, z= 0))
     #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
-    plt.loglog(M, y1, label = 'sigma='+str(el))
-    plt.loglog(M, y2, '--', label = ' Colossus')
+    plt.loglog(M, y1, linewidth=3, label = 'sigma='+str(el))
+    #plt.loglog(M, y2, '--', label = ' Colossus')
 plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
 plt.ylabel('f', size = 15)
-plt.xlim(2e13, 8e16)
-plt.ylim(1e-14, 1)
+plt.xlim(2e8, 1e15)
+plt.ylim(1e-1, 7e-1)
 plt.title('Press and Schechter multiplicity function', size = 15)
 plt.legend()
 plt.show()'''
@@ -462,7 +471,7 @@ plt.show()'''
 ##########################------------  same : omega_m evolution--------------------------##############################
 
 '''import matplotlib.pyplot as plt
-M = np.logspace(8,17, 100)
+M = np.logspace(7,15, 100)
 om1 = [0.15, 0.3, 0.5]
 for el in om1:
     y1 = fps(nu(M, z=0, om0=el, ol0=1-el,  sig8 = sigma8))
@@ -470,13 +479,13 @@ for el in om1:
     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
     y2 = fps(peaks.peakHeight(M, z= 0))
     #mfunc = mass_function.massFunction(M, z=0, mdef='fof', model='press74', q_out='f')
-    plt.loglog(M, y1, label = '$\Omega_m=$'+str(el)+' Yuba')
-    plt.loglog(M, y2, '--', label = ' Colossus')
-plt.xlabel('M [$h^{-1}M_\odot$]', size = 15)
-plt.ylabel('f', size = 15)
-plt.xlim(2e13, 8e16)
-plt.ylim(1e-14, 1)
-plt.title('Press and Schechter multiplicity function', size = 15)
+    plt.loglog(M, y1, linewidth=3, label = '$\Omega_m=$'+str(el))
+    #plt.loglog(M, y2, '--', label = ' Colossus')
+plt.xlabel('M [$h^{-1}M_\odot$]', size = 20)
+plt.ylabel('f', size = 20)
+plt.xlim(2e7, 1e15)
+plt.ylim(1e-1, 5e-1)
+plt.title('Press and Schechter multiplicity function', size = 20)
 plt.legend()
 plt.show()'''
 
@@ -740,7 +749,8 @@ plt.show()'''
 
 '''import matplotlib.pyplot as plt
 #onepluszs = np.logspace(0, np.log10(3), 10)
-onepluszs = [1, 1.5, 2, 3]
+onepluszs = [1, 1.5, 2, 3, 4]
+masses = [1e8, 1e10, 1e12, 1e14]
 size = 15
 #sig8 = np.logspace(np.log10(0.6), np.log10(1.1), size)
 #omv = np.logspace(np.log10(0.2), np.log10(0.4), size)
@@ -752,20 +762,22 @@ olv = 1 - omv
 
 nom = np.zeros((size, size))
 for el in onepluszs:
-    mt = 4e13
-    for i in range(size):
-        for j in range(size):
-            nom[i,j] = np.log10(hmf(mt, z=el-1, sig8=sig8[j], om0=omv[i], ol0=olv[i],
-                                                 kmax=5, prec=100, camb=False))
-    plt.contourf(x, y, nom, levels=100, cmap='jet')
-    plt.xlabel('$\Omega_m$', size = 25)
-    plt.ylabel('$\sigma_8$', size = 25)
-    cbar = plt.colorbar()
-    cbar.ax.tick_params(labelsize=15)
-    plt.xticks(size=15)
-    plt.yticks(size=15)
-    plt.title('n(M>4e13) z = '+str(round(el-1, 2)), size=20)
-    plt.show()'''
+    for m in masses:
+        mt = m
+        for i in range(size):
+            for j in range(size):
+                nom[i,j] = np.log10(hmf(mt, z=el-1, sig8=sig8[j], om0=omv[i], ol0=olv[i],
+                                                     kmax=5, prec=100, camb=False, model='sheth', out='dndlnM'))
+        plt.contourf(x, y, nom, levels=100, cmap='jet')
+        plt.xlabel('$\Omega_m$', size = 25)
+        plt.ylabel('$\sigma_8$', size = 25)
+        cbar = plt.colorbar()
+        cbar.ax.tick_params(labelsize=15)
+        plt.xticks(size=15)
+        plt.yticks(size=15)
+        plt.title('n(M) log M = '+str(round(np.log10(mt), 2))+' z='+str(round(el-1, 2)), size=20)
+        plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png')
+        plt.show()'''
 
 ########################################-----------------sigma8 =const----------------##################################
 '''import matplotlib.pyplot as plt

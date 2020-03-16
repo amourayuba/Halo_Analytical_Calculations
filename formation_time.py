@@ -47,6 +47,23 @@ def K(ds, dw, model='sheth', A=0.27, a = 0.707, p=0.3):
 def mu(St, a):
     return (1 + (2**a -1)*St)**(1/a)
 
+def f_ec(S1, S0, w1, w0):
+    dw = w1-w0
+    dS = S1-S0
+    nu0 = w0**2/S0
+    A0 = 0.8661*(1-0.133*nu0**(-0.615))
+    A1 = 0.308*nu0**(-0.115)
+    A2 = 0.0373*nu0**(-0.115)
+    Sbar = dS/S0
+    A3 = A0**2 + 2*A0*A1*np.sqrt(dS*Sbar)/dw
+    return A0*(2*np.pi)**(-0.5)*dw*dS**(-1.5)*\
+           np.exp(-0.5*A1**2*Sbar)*(np.exp(-0.5*A3*dw**2/dS)+A2*Sbar**1.5*(1+2*A1*np.sqrt(Sbar/np.pi)))
+    #return 2*A0*(2*np.pi)**(-0.5)*\
+    #       np.exp(-0.5*A1**2*Sbar)*(np.exp(-0.5*A3*dw**2/dS)+A2*Sbar**1.5*(1+2*A1*np.sqrt(Sbar/np.pi)))
+def f_sc(S1, S0, w1, w0):
+    dw = w1-w0
+    ds = S1-S0
+    return (2*np.pi)**-0.5*dw*ds**(-1.5)*np.exp(-0.5*dw**2/ds)
 def proba(M,  zf,  frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
           ol0=oml, omb=omb, camb=False, model='press', colos=False, A=0.322, a=0.707, p=0.3):
     """
@@ -104,7 +121,7 @@ def proba(M,  zf,  frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window
 
 
 def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-          ol0=oml, omb=omb, camb=False, model='sheth', colos=False, A=0.322, a=0.707, p=0.3):
+          ol0=oml, omb=omb, camb=False, model='sheth', colos=False, A=0.5, a=1, p=0):
     S0 = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2
     Sh = sigma(M*frac, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2
     w0 = delta_c(zi, om0, ol0)
@@ -120,12 +137,19 @@ def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, w
         mat_nu = np.sqrt(a)*mat_wf/np.sqrt(mat_S)  # (acc, l)
         #mat_St = (mat_S - S0)/(Sh - S0)   # (acc, l)
         #mat_St[-1, :] = 1e-10
-        mat_f = A*fps(mat_nu[:-1,:])*(1 + 1/mat_nu[:-1, :]**(2*p)) # (acc-1, l)
-        #mat_f = fps(mat_nu[:-1, :])
-        mat_dnu = (mat_nu[2:-1, :] - mat_nu[:-3,:])*0.5  #(acc-3, l)
-        #mat_Ks = K(mat_S, mat_wf, model, A, a, p)
-        #mat_ds = (mat_S[2:, :] - mat_S[:-2,:])*0.5
-        return M*np.sum(mat_dnu*mat_f[1:-1,:]/mat_mass[1:-2,:], axis=0) #(acc-3, l)
+        if model=='EC':
+            mat_f = f_ec(mat_S[:,:]+S0, S0, mat_wf[:,:]+w0, w0)
+            mat_ds = 0.5*(mat_S[2:,:]-mat_S[:-2,:])
+            #mat_dnu = (mat_nu[2:, :] - mat_nu[:-2,:])*0.5  #(acc-3, l)
+            #mat_dm = 0.5*(mat_mass[2:, :] - mat_mass[:-2, :])
+            return -M*np.sum((mat_ds)*mat_f[1:-1,:]/mat_mass[1:-1,:], axis=0)
+        else:
+            mat_f = A*fps(mat_nu[:-1,:])*(1 + 1/mat_nu[:-1, :]**(2*p))/mat_nu[:-1,:] # (acc-1, l)
+            #mat_f = fps(mat_nu[:-1, :])
+            mat_dnu = (mat_nu[2:-1, :] - mat_nu[:-3,:])*0.5  #(acc-3, l)
+            #mat_Ks = K(mat_S, mat_wf, model, A, a, p)
+            #mat_ds = (mat_S[2:, :] - mat_S[:-2,:])*0.5
+            return M*np.sum(mat_dnu*mat_f[1:-1,:]/mat_mass[1:-2,:], axis=0) #(acc-3, l)
     else:
         mass = np.logspace(np.log10(M*0.5), np.log10(M), acc)
         wf = delta_c(zf, om0, ol0)
@@ -137,6 +161,101 @@ def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, w
         Ks = K(St, wt, model, A, a, p)
         ds = (St[2:] - St[:-2])*0.5
         return -M*np.sum(ds*Ks[1:-1]/mass[1:-1])
+
+def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20),  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30,
+                  window='TopHat', prec=1000, om0=om,
+          ol0=oml, omb=omb, camb=False, model='sheth', colos=False, A=0.5, a=1, p=0):
+    res = []
+    if not( type(weights) == np.ndarray or type(weights) == list):
+        for mass in masses:
+            res.append(new_proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
+                         model, colos, A, a, p))
+        ares = np.array(res)
+        return np.sum(ares, axis=0) / len(masses)
+    else:
+        for i in range(len(masses)):
+            mass = masses[i]
+            w = weights[i]/np.sum(weights)
+            res.append(new_proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
+                                 model, colos, A, a, p)*w)
+        ares = np.array(res)
+        return np.sum(ares, axis=0)
+
+'''#masses = np.logspace(8, 14, 50)
+histmass = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/histmas3e14plus.txt')
+histmass2 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/histmas1_3e14.txt')
+histmass3 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/histmas1_3e13.txt')
+histmass4 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/histmas1_3e12.txt')
+histmass5 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/histmas1to3e11.txt')
+cumsum = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/cum_histo_3e14plus.txt')
+cumsum2 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/cum_histo_1to3e14.txt')
+cumsum3 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/cum_histo_1to3e13.txt')
+cumsum4 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/cum_histo_1to3e12.txt')
+cumsum5 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/cum_histo_1to3e11.txt')
+poisson = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/poisson_errors_3e14plus.txt')
+poisson2 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/poisson_errors_1to3e14.txt')
+poisson3 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/poisson_errors_1to3e13.txt')
+poisson4 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/poisson_errors_1to3e12.txt')
+poisson5 = np.loadtxt('/home/yuba/Illustris-3/output/groups_099/poisson_errors_1to3e11.txt')
+
+masses1 = histmass[1]*1e10
+weights1 = histmass[0]
+masses2 = histmass2[1]*1e10
+weights2 = histmass2[0]
+masses3 = histmass3[1]*1e10
+weights3 = histmass3[0]
+masses4 = histmass4[1]*1e10
+weights4 = histmass4[0]
+masses5 = histmass5[1]*1e10
+weights5 = histmass5[0]
+
+zf = np.linspace(0.05, 2, 100)
+res = M_integ_proba(masses1, weights1, acc= 100000, model='EC', zf=zf, colos=True, om0=0.3089, omb=0.0486, sig8=0.8159,  h=0.6774)
+res2 = M_integ_proba(masses2, weights2, acc= 100000, model='EC', zf=zf, colos=True, om0=0.3089, omb=0.0486, sig8=0.8159,  h=0.6774)
+res3 = M_integ_proba(masses3, weights3, acc= 100000,model='EC', zf=zf, colos=True, om0=0.3089, omb=0.0486, sig8=0.8159,  h=0.6774)
+res4 = M_integ_proba(masses4, weights4, acc= 100000, model='EC', zf=zf, colos=True, om0=0.3089, omb=0.0486, sig8=0.8159,  h=0.6774)
+res5 = M_integ_proba(masses5, weights5, acc= 100000, model='EC', zf=zf, colos=True, om0=0.3089, omb=0.0486, sig8=0.8159,  h=0.6774)
+
+dz = zf[1]-zf[0]
+#dpdz = -(np.array(res)[2:] - np.array(res)[:-2])*0.5/dz
+#plt.plot(zf, res, label='Lacey and Cole '+ '$M > 3e14$', color='red', linewidth=2)
+plt.plot(zf, res, label='EC '+ '$M > 3e14$', color='red', linewidth=2)
+plt.errorbar(cumsum[0], cumsum[1],linestyle='--', yerr=poisson,  label= 'Illustris halos'+ '$M>3e14$', color='red',linewidth=2)
+#plt.plot(zf, res2, label='Lacey and Cole '+ '$ 1e14<M<3e14$', color='blue', linewidth=2)
+#plt.plot(zf, res2, label='EC '+ '$ 1e14<M<3e14$', color='blue', linewidth=2)
+#plt.errorbar(cumsum2[0], cumsum2[1], linestyle='--', yerr=poisson2, label= 'Illustris halos'+ '$ 1e14<M<3e14$', color='blue', linewidth=2)
+#plt.plot(zf, res3, label='Lacey and Cole '+ '$ 1e13<M<5e13$', color='black', linewidth=2)
+#plt.plot(zf, res3, label='EC '+ '$ 1e13<M<5e13$', color='black', linewidth=2)
+#plt.errorbar(cumsum3[0], cumsum3[1], linestyle='--', yerr=poisson3, label= 'Illustris halos'+ '$ 1e13<M<3e13$', color='black', linewidth=2)
+#plt.plot(zf, res4, label='Lacey and Cole '+ '$ 1e12<M<3e12$', color='green', linewidth=2)
+#plt.plot(zf, res4, label='EC '+ '$ 1e12<M<3e12$', color='green', linewidth=2)
+#plt.errorbar(cumsum4[0], cumsum4[1], linestyle='--', yerr=poisson4, label= 'Illustris halos'+ '$ 1e12<M<3e12$', color='green', linewidth=2)
+#plt.plot(zf, res5, label='Lacey and Cole '+ '$ 1e11<M<3e11$', color='grey', linewidth=2)
+plt.plot(zf, res5, label='EC '+ '$ 1e11<M<3e11$', color='grey', linewidth=2)
+plt.errorbar(cumsum5[0], cumsum5[1], linestyle='--', yerr=poisson5, label= 'Illustris halos'+ '$ 1e11<M<3e11$', color='grey', linewidth=2)
+plt.xlabel('z', size=20)
+plt.xlim(0, 2.5)
+plt.ylabel('P(Zf > z)', size=20)
+plt.legend()
+#plt.plot(zf[1:-1], dpdz)
+plt.show()'''
+
+
+'''masses = [1e8, 1e10, 1e12, 1e14]
+zf = np.linspace(0.05, 5, 30)
+dz = zf[1]-zf[0]
+
+for mass in masses:
+    prob1 = new_proba(mass, zf, acc=1000000, model='EC', colos=True)
+    prob2 = new_proba(mass, zf, acc=1000000, model='press', colos=True)
+    dpdz1 = (prob1[2:]-prob1[:-2])*0.5/dz
+    dpdz2 = (prob2[2:]-prob2[:-2])*0.5/dz
+    #plt.plot(zf, new_proba(mass, zf, acc=2000000, model='EC', colos=True), label='mass='+ str(mass))
+    plt.plot(zf[1:-1], -dpdz1, '--', linewidth=3, label='SC log mass='+ str(round(np.log10(mass), 2)))
+    plt.plot(zf[1:-1], -dpdz2, linewidth=2, label='SC log mass='+ str(round(np.log10(mass), 2)))
+plt.legend()
+plt.show()'''
+
 
 
 def proba2(wf, a, man=False, acc=1000):
