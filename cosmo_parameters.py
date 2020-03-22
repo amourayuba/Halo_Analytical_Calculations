@@ -1,5 +1,4 @@
 from __future__ import division
-
 import numpy as np
 
 ### Fundamental set of parameters
@@ -84,17 +83,29 @@ def D(z, om0, ol0):
 def delta_c(z, om0=om, ol0=oml):
     """critical overdensity"""
     return 1.686*growth(0, om0, ol0)*(1+z)/growth(z, om0, ol0)
-
+def delta_ec(z, sig, om0=om, ol0=oml):
+    return np.sqrt(0.707)*delta_c(z, om0, ol0)*(1 + 0.47*(sig**2/delta_c(z, om0, ol0)**2)**0.615)
 
 
 #######################################------------PLOTS --------------------------#####################################
-'''oms = np.linspace(0.1, 0.7, 5)
-zs = np.linspace(0, 2, 100)
+'''import matplotlib.pyplot as plt
+#oms = np.linspace(0.1, 0.7, 5)
+oms = [0.15, 0.3, 0.5, 0.7]
+zs = np.linspace(0, 2, 1000)
 for el in oms:
-    plt.plot(zs, delta_c(zs, el, 1-el), label='$\Omega_m = $'+str(el))
-plt.legend()
-plt.xlabel('z')
-plt.ylabel('$\delta_c$')
+    plt.plot(zs, delta_c(zs, el, 1-el), linewidth = 4, label='$\Omega_m = $'+str(el))
+plt.legend(fontsize='x-large')
+plt.xlabel('z', size= 25)
+plt.xlim(0, 2)
+plt.ylim(1.65, 4.5)
+plt.ylabel('$\delta_c$', size= 25)
+plt.xticks(size=20)
+plt.yticks(size=20)
 plt.show()'''
 
 
+'''import matplotlib.pyplot as plt
+oms = np.linspace(0.1, 0.7, 50)
+
+plt.plot(oms, omega_m(z=2, omgm0=oms))
+plt.show()'''
