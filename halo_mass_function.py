@@ -748,6 +748,12 @@ plt.show()'''
 ##########################---------------Varying z ----------------------------------###################################
 
 '''import matplotlib.pyplot as plt
+import matplotlib as mpl
+params = {'legend.fontsize': 20,
+          'legend.handlelength': 2}
+
+plt.rcParams.update(params)
+#mpl.rcParams["figure.dpi"] = 50
 #onepluszs = np.logspace(0, np.log10(3), 10)
 onepluszs = [1, 1.5, 2, 3, 4]
 masses = [1e8, 1e10, 1e12, 1e14]
@@ -761,13 +767,16 @@ y = np.array([sig8]*size)
 olv = 1 - omv
 
 nom = np.zeros((size, size))
-for el in onepluszs:
-    for m in masses:
-        mt = m
+fig, axs = plt.subplot(4, 4)
+for k in range(len(onepluszs)):
+    el = onepluszs[k]
+    for l in range(len(masses)):
+        mt = masses[l]
         for i in range(size):
             for j in range(size):
                 nom[i,j] = np.log10(hmf(mt, z=el-1, sig8=sig8[j], om0=omv[i], ol0=olv[i],
-                                                     kmax=5, prec=100, camb=False, model='sheth', out='dndlnM'))
+                                                     kmax=5, prec=100, camb=False, model='sheth',
+                                        out='dndlnM'))
         plt.contourf(x, y, nom, levels=100, cmap='jet')
         plt.xlabel('$\Omega_m$', size = 25)
         plt.ylabel('$\sigma_8$', size = 25)
@@ -775,9 +784,66 @@ for el in onepluszs:
         cbar.ax.tick_params(labelsize=15)
         plt.xticks(size=15)
         plt.yticks(size=15)
-        plt.title('n(M) log M = '+str(round(np.log10(mt), 2))+' z='+str(round(el-1, 2)), size=20)
-        plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png')
+        plt.title('dN/dlogM log M='+str(round(np.log10(mt), 2))+' z='+str(round(el-1, 2)), size=20)
+        plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png',
+                    bbox_inches ='tight')
         plt.show()'''
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib import ticker
+params = {'legend.fontsize': 10, 'legend.handlelength': 1}
+
+#plt.rcParams.update(params)
+#mpl.rcParams["figure.dpi"] = 50
+#onepluszs = np.logspace(0, np.log10(3), 10)
+onepluszs = [1, 2, 3]
+masses = [5e12, 5e13, 5e14]
+size = 15
+#sig8 = np.logspace(np.log10(0.6), np.log10(1.1), size)
+#omv = np.logspace(np.log10(0.2), np.log10(0.4), size)
+sig8 = np.linspace(0.6, 1.1, size)
+omv = np.linspace(0.15, 0.5, size)
+x = np.array([omv]*size).transpose()
+y = np.array([sig8]*size)
+olv = 1 - omv
+
+nom = np.zeros((size, size))
+fig, axs = plt.subplots(3, 3, dpi=500)
+
+for k in range(len(onepluszs)):
+    el = onepluszs[k]
+    for l in range(len(masses)):
+        mt = masses[l]
+        for i in range(size):
+            for j in range(size):
+                nom[i,j] = np.log10(hmf(mt, z=el-1, sig8=sig8[j], om0=omv[i], ol0=olv[i],
+                                                     kmax=5, prec=100, camb=False, model='sheth',
+                                        out='dndlnM'))
+        ax = axs[k,l]
+        im = ax.contourf(x, y, nom, levels=100, cmap='jet')
+        #cbar = fig.colorbar(im, ax=ax)
+        #tick_locator = ticker.MaxNLocator(nbins=5)
+        #cbar.locator = tick_locator
+        #cbar.update_ticks()
+        #cbar.ax.tick_params(labelsize=6)
+        #plt.xlabel('$\Omega_m$', size = 25)
+        #plt.ylabel('$\sigma_8$', size = 25)
+#cbar = plt.colorbar()
+#cbar.ax.tick_params(labelsize=15)
+        #plt.xticks(size=15)
+        #plt.yticks(size=15)
+        #plt.title('dN/dlogM log M='+str(round(np.log10(mt), 2))+' z='+str(round(el-1, 2)), size=20)
+for ax in axs.flat:
+    ax.set(xlabel='$\Omega_m$', ylabel='$\sigma_8$')
+    ax.label_outer()
+
+#fig.subplots_adjust(right=0.8)
+#cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+#cbar = fig.colorbar(im, ax=axs[:,:])
+
+#cbar.ax.tick_params(labelsize=15)
+plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png',bbox_inches ='tight', dpi=1100)
+plt.show()
 
 ########################################-----------------sigma8 =const----------------##################################
 '''import matplotlib.pyplot as plt
