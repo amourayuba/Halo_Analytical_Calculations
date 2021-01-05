@@ -393,21 +393,25 @@ plt.ylabel(r'$\nu$', size=15)
 plt.legend()
 plt.show()'''
 
-######################################-----------------Omega m---------------------------###############################
-'''import matplotlib.pyplot as plt
-M = np.logspace(9, 17, 1000)
-omegam = [0.15, 0.3, 0.5]
-for el in omegam:
-    nu1 = nu(M, z=0, om0=el, ol0=1-el)
-    my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
-    cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-    nu2 = peaks.peakHeight(M, z=0)
-    plt.loglog(M, nu1, label='Analytic  $\Omega_m$='+str(el))
-    plt.loglog(M, nu2,'--', label='COLOSSUS')
-plt.xlabel('M [$M_\odot/h$]', size=15)
-plt.ylabel(r'$\nu$', size=15)
-plt.legend()
-plt.show()'''
+# ######################################-----------------Omega m---------------------------###############################
+# import matplotlib.pyplot as plt
+# #M = np.logspace(14, 16, 1000)
+# M = 1e15
+# zs= np.linspace(0, 2, 1000)
+# omegam = [0.15, 0.3, 0.5]
+# for el in omegam:
+#     nu1 = nu(M, z=zs, om0=el, ol0=1-el)
+#     my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': el, 'Ode0': 1-el, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
+#     cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+#     nu2 = []
+#     for z in zs:
+#         nu2.append(peaks.peakHeight(M, z=z))
+#     plt.loglog(zs, nu1, label='Analytic  $\Omega_m$='+str(el))
+#     plt.loglog(zs, nu2,'--', label='COLOSSUS')
+# plt.xlabel('z', size=15)
+# plt.ylabel(r'$\nu$', size=15)
+# plt.legend()
+# plt.show()
 
 
 '''import matplotlib.pyplot as plt
@@ -788,7 +792,7 @@ for k in range(len(onepluszs)):
         plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png',
                     bbox_inches ='tight')
         plt.show()'''
-import matplotlib.pyplot as plt
+'''import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import ticker
 params = {'legend.fontsize': 10, 'legend.handlelength': 1}
@@ -843,7 +847,7 @@ for ax in axs.flat:
 
 #cbar.ax.tick_params(labelsize=15)
 plt.savefig('om_s8_n_M'+str(round(np.log10(mt), 2))+'z'+str(round(el-1, 2))+'.png',bbox_inches ='tight', dpi=1100)
-plt.show()
+plt.show()'''
 
 ########################################-----------------sigma8 =const----------------##################################
 '''import matplotlib.pyplot as plt
