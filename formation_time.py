@@ -121,7 +121,7 @@ def proba(M,  zf,  frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window
 
 
 def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-          ol0=oml, omb=omb, camb=False, model='sheth', colos=False, A=0.5, a=1, p=0):
+          ol0=oml, omb=omb, camb=False, model='sheth', colos=False):
     S0 = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2
     Sh = sigma(M*frac, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2
     w0 = delta_c(zi, om0, ol0)
@@ -134,7 +134,7 @@ def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, w
         #mat_wt = (mat_wf-w0)/np.sqrt(Sh-S0)
         mat_S = sigma(mat_mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2-S0  # (acc, l)
         mat_S[-1, :] = 1e-10
-        mat_nu = np.sqrt(a)*mat_wf/np.sqrt(mat_S)  # (acc, l)
+        mat_nu = mat_wf/np.sqrt(mat_S)  # (acc, l)
         #mat_St = (mat_S - S0)/(Sh - S0)   # (acc, l)
         #mat_St[-1, :] = 1e-10
         if model=='EC':
@@ -142,25 +142,29 @@ def new_proba(M,  zf,  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30, w
             mat_ds = 0.5*(mat_S[2:,:]-mat_S[:-2,:])
             #mat_dnu = (mat_nu[2:, :] - mat_nu[:-2,:])*0.5  #(acc-3, l)
             #mat_dm = 0.5*(mat_mass[2:, :] - mat_mass[:-2, :])
-            return -M*np.sum((mat_ds)*mat_f[1:-1,:]/mat_mass[1:-1,:], axis=0)
+            return -M*np.sum(mat_ds*mat_f[1:-1,:]/mat_mass[1:-1,:], axis=0)
         else:
-            mat_f = A*fps(mat_nu[:-1,:])*(1 + 1/mat_nu[:-1, :]**(2*p))/mat_nu[:-1,:] # (acc-1, l)
+            mat_f = fps(mat_nu[:-1,:])/mat_nu[:-1,:] # (acc-1, l)
             #mat_f = fps(mat_nu[:-1, :])
             mat_dnu = (mat_nu[2:-1, :] - mat_nu[:-3,:])*0.5  #(acc-3, l)
             #mat_Ks = K(mat_S, mat_wf, model, A, a, p)
             #mat_ds = (mat_S[2:, :] - mat_S[:-2,:])*0.5
             return M*np.sum(mat_dnu*mat_f[1:-1,:]/mat_mass[1:-2,:], axis=0) #(acc-3, l)
     else:
-        mass = np.logspace(np.log10(M*0.5), np.log10(M), acc)
-        wf = delta_c(zf, om0, ol0)
-        wt = (wf-w0)/np.sqrt(Sh-S0)
+        mass = np.logspace(np.log10(M*frac), np.log10(M), acc)
+        wf = delta_c(zf, om0, ol0) - w0
         #St = np.logspace(-10, 0, acc)
-        S = sigma(mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2
-        St = (S - S0)/(Sh - S0)
-        #St[-1] = 1e-10
-        Ks = K(St, wt, model, A, a, p)
-        ds = (St[2:] - St[:-2])*0.5
-        return -M*np.sum(ds*Ks[1:-1]/mass[1:-1])
+        S = sigma(mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2 -S0
+        S[-1] = 1e-10
+        nu = wf/np.sqrt(S)
+        if model == 'EC':
+            f = f_ec(S + S0, S0, wf+w0, w0)
+            ds = 0.5*(S[2:] - S[:-2])
+            return -M*np.sum(ds*f[1:-1]/mass[1:-1])
+        else:
+            f = fps(nu)/nu
+            dnu = (nu[2:] - nu[:-2])*0.5
+            return M*np.sum(dnu*f[1:-1]/mass[1:-1])
 
 def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20),  frac=0.5, acc=10000, zi=0.0, sig8=sigma8, h=h, kmax=30,
                   window='TopHat', prec=1000, om0=om,
@@ -253,6 +257,17 @@ for mass in masses:
     #plt.plot(zf, new_proba(mass, zf, acc=2000000, model='EC', colos=True), label='mass='+ str(mass))
     plt.plot(zf[1:-1], -dpdz1, '--', linewidth=3, label='SC log mass='+ str(round(np.log10(mass), 2)))
     plt.plot(zf[1:-1], -dpdz2, linewidth=2, label='SC log mass='+ str(round(np.log10(mass), 2)))
+plt.legend()
+plt.show()'''
+
+
+'''zfs = np.linspace(0.001, 3, 50)
+te1 = new_proba(zf = zfs, M=1e11, frac=0.3, acc=500000, model='EC', colos=True)
+te2 = new_proba(zf = zfs, M=1e11, frac=0.15, acc=500000, model='EC', colos=True)
+te3 = new_proba(zf = zfs, M=1e11, frac=0.3, acc=500000, model='press', colos=True)
+plt.plot(zfs, te1, label = 'EC 0.3')
+plt.plot(zfs, te2, label = 'EC 15')
+plt.plot(zfs, te3, label = 'press 0.3')
 plt.legend()
 plt.show()'''
 
