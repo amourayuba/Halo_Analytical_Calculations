@@ -1,5 +1,5 @@
 from fluctuation_rms import *
-import matplotlib.pyplot as plt
+
 
 def sig(sig8=sigma8, h=h, omb=omb, om0=om, ns=ns, test= False, prec=1000):
 
