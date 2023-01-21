@@ -8,7 +8,7 @@ rho_c = 3*100**2/(8*np.pi*G)       # h^2xMsun/Mpc**3
 ### New set of cosmo parameters used here using
 #Eiseinstein and Hu conventions and Planck 2018 values
 
-h = 0.6766
+h = 0.7
 c = 3e5       #speed of light km/s
 ombh2 = 0.02242   #Density of baryons in units of h2
 omb = ombh2/h**2  #Density of baryons
@@ -87,25 +87,27 @@ def delta_ec(z, sig, om0=om, ol0=oml):
     return np.sqrt(0.707)*delta_c(z, om0, ol0)*(1 + 0.47*(sig**2/delta_c(z, om0, ol0)**2)**0.615)
 
 
+
 #######################################------------PLOTS --------------------------#####################################
-'''import matplotlib.pyplot as plt
-#oms = np.linspace(0.1, 0.7, 5)
-oms = [0.15, 0.3, 0.5, 0.7]
-zs = np.linspace(0, 2, 1000)
-for el in oms:
-    plt.plot(zs, delta_c(zs, el, 1-el), linewidth = 4, label='$\Omega_m = $'+str(el))
-plt.legend(fontsize='x-large')
-plt.xlabel('z', size= 25)
-plt.xlim(0, 2)
-plt.ylim(1.65, 4.5)
-plt.ylabel('$\delta_c$', size= 25)
-plt.xticks(size=20)
-plt.yticks(size=20)
-plt.show()'''
+if __name__ == "__main__":
+    '''import matplotlib.pyplot as plt
+    #oms = np.linspace(0.1, 0.7, 5)
+    oms = [0.15, 0.3, 0.5, 0.7]
+    zs = np.linspace(0, 2, 1000)
+    for el in oms:
+        plt.plot(zs, delta_c(zs, el, 1-el), linewidth = 4, label='$\Omega_m = $'+str(el))
+    plt.legend(fontsize='x-large')
+    plt.xlabel('z', size= 25)
+    plt.xlim(0, 2)
+    plt.ylim(1.65, 4.5)
+    plt.ylabel('$\delta_c$', size= 25)
+    plt.xticks(size=20)
+    plt.yticks(size=20)
+    plt.show()'''
 
 
-'''import matplotlib.pyplot as plt
-oms = np.linspace(0.1, 0.7, 50)
-
-plt.plot(oms, omega_m(z=2, omgm0=oms))
-plt.show()'''
+    '''import matplotlib.pyplot as plt
+    oms = np.linspace(0.1, 0.7, 50)
+    
+    plt.plot(oms, omega_m(z=2, omgm0=oms))
+    plt.show()'''

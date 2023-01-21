@@ -94,93 +94,94 @@ def Transfer(k, omega=om, omega_b=omb, h=h, Tcmb=Tcmb):
     return (omega_b / omega) * Tb + (1 - omega_b / omega) * Tc
 
 
+if __name__ == "__name__":
 
-###############################-----------------CAMB USAGE FOR COMPARISON-----------------##############################
-'''
-import camb
-from camb import model
-pars = camb.CAMBparams()
-pars.set_cosmology(H0=100*h, ombh2=ombh2, omch2=omch2)
-pars.InitPower.set_params(ns=ns)
-pars.set_matter_power(redshifts=[0], kmax=10)
-results = camb.get_results(pars)
-
-def primordial_PK(k):
-    return results.Params.scalar_power(k)
-'''
-
-
-
-####################-----------------------TRANSFER FUNCTION TEST VS COLOSSUS-------------##############################
-
-##############################---------------------------TRANSFER FUNCTION DEPENDENCE ON OMEGA_M----------------########
-
-'''
-import matplotlib.pyplot as plt
-omg = np.arange(0.1, 0.9, 0.2)
-for el in omg:
+    ###############################-----------------CAMB USAGE FOR COMPARISON-----------------##############################
+    '''
+    import camb
+    from camb import model
     pars = camb.CAMBparams()
-    pars.set_cosmology(H0=100 * h, ombh2=ombh2, omch2=el*h**2 - ombh2)
+    pars.set_cosmology(H0=100*h, ombh2=ombh2, omch2=omch2)
     pars.InitPower.set_params(ns=ns)
     pars.set_matter_power(redshifts=[0], kmax=10)
     results = camb.get_results(pars)
-    sig = results.get_sigma8()
-    trans = results.get_matter_transfer_data()
-    kh = trans.transfer_data[0,:,0]
-    W = trans.transfer_data[model.Transfer_tot-1,:,0]
-    nW = W/W[0]
-    y2 = Transfer(kh*h, omega=el)
-    plt.plot(kh, (y2 - nW) / nW, label='$\Omega_m = $'+str(el))
-plt.xscale('log')
-plt.xlabel('k [h/Mpc]')
-plt.ylabel('$\Delta T/T_{CAMB}$')
-plt.legend()
-plt.show()'''
-
-'''
-import matplotlib.pyplot as plt
-plt.figure()
-plt.loglog(kh, W, label='CAMB')
-plt.loglog(kh, y2, label='Analytical')
-plt.xlabel('k [h/Mpc]')
-plt.ylabel('Transfer function')
-plt.legend()
-plt.show()'''
+    
+    def primordial_PK(k):
+        return results.Params.scalar_power(k)
+    '''
 
 
-############################-------------------POWER SPECTRUM DEPENDENCE ON OMEGA_M---------############################
+
+    ####################-----------------------TRANSFER FUNCTION TEST VS COLOSSUS-------------##############################
+
+    ##############################---------------------------TRANSFER FUNCTION DEPENDENCE ON OMEGA_M----------------########
+
+    '''
+    import matplotlib.pyplot as plt
+    omg = np.arange(0.1, 0.9, 0.2)
+    for el in omg:
+        pars = camb.CAMBparams()
+        pars.set_cosmology(H0=100 * h, ombh2=ombh2, omch2=el*h**2 - ombh2)
+        pars.InitPower.set_params(ns=ns)
+        pars.set_matter_power(redshifts=[0], kmax=10)
+        results = camb.get_results(pars)
+        sig = results.get_sigma8()
+        trans = results.get_matter_transfer_data()
+        kh = trans.transfer_data[0,:,0]
+        W = trans.transfer_data[model.Transfer_tot-1,:,0]
+        nW = W/W[0]
+        y2 = Transfer(kh*h, omega=el)
+        plt.plot(kh, (y2 - nW) / nW, label='$\Omega_m = $'+str(el))
+    plt.xscale('log')
+    plt.xlabel('k [h/Mpc]')
+    plt.ylabel('$\Delta T/T_{CAMB}$')
+    plt.legend()
+    plt.show()'''
+
+    '''
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.loglog(kh, W, label='CAMB')
+    plt.loglog(kh, y2, label='Analytical')
+    plt.xlabel('k [h/Mpc]')
+    plt.ylabel('Transfer function')
+    plt.legend()
+    plt.show()'''
 
 
-'''
-import matplotlib.pyplot as plt
-omg = np.arange(0.1, 0.9, 0.2)
-res = []
-for el in omg:
-    pars = camb.CAMBparams()
-    pars.set_cosmology(H0=100 * h, ombh2=ombh2, omch2=el*h**2 - ombh2)
-    pars.InitPower.set_params(ns=ns)
-    pars.set_matter_power(redshifts=[0], kmax=10)
-    results = camb.get_results(pars)
-    sig = results.get_sigma8()
-    #kh, z, pk = results.get_matter_power_spectrum(minkh=1e-4, maxkh=10, npoints=1000)
-    trans = results.get_matter_transfer_data()
-    kh = trans.transfer_data[0, :, 0]
-    W = trans.transfer_data[model.Transfer_tot-1,:,0]
-    nW = W/W[0]
-    y3 = results.Params.scalar_power(kh)*kh*nW**2
-    y4 = results.Params.scalar_power(kh)*kh*Transfer(kh*h, el)**2
-    y2 = power_spectrum_a2(kh, om0=el, sigma8=0.8)
-    #y1 = pk[0]
-    #res.append(y1[0]/y2[0])
-    #plt.plot(kh, (y2 - y1) / y1, label='$\Omega_m = $'+str(el))
-    plt.plot(kh, (y3-y4)/y4, label='$\Omega_m = $' + str(el))
-#plt.loglog(omg, res)
-plt.xscale('log')
-#plt.yscale('log')
-plt.xlabel('k [h/Mpc]')
-plt.ylabel('$\Delta P/P_{CAMB}$')
-plt.legend()
-plt.show()'''
+    ############################-------------------POWER SPECTRUM DEPENDENCE ON OMEGA_M---------############################
+
+
+    '''
+    import matplotlib.pyplot as plt
+    omg = np.arange(0.1, 0.9, 0.2)
+    res = []
+    for el in omg:
+        pars = camb.CAMBparams()
+        pars.set_cosmology(H0=100 * h, ombh2=ombh2, omch2=el*h**2 - ombh2)
+        pars.InitPower.set_params(ns=ns)
+        pars.set_matter_power(redshifts=[0], kmax=10)
+        results = camb.get_results(pars)
+        sig = results.get_sigma8()
+        #kh, z, pk = results.get_matter_power_spectrum(minkh=1e-4, maxkh=10, npoints=1000)
+        trans = results.get_matter_transfer_data()
+        kh = trans.transfer_data[0, :, 0]
+        W = trans.transfer_data[model.Transfer_tot-1,:,0]
+        nW = W/W[0]
+        y3 = results.Params.scalar_power(kh)*kh*nW**2
+        y4 = results.Params.scalar_power(kh)*kh*Transfer(kh*h, el)**2
+        y2 = power_spectrum_a2(kh, om0=el, sigma8=0.8)
+        #y1 = pk[0]
+        #res.append(y1[0]/y2[0])
+        #plt.plot(kh, (y2 - y1) / y1, label='$\Omega_m = $'+str(el))
+        plt.plot(kh, (y3-y4)/y4, label='$\Omega_m = $' + str(el))
+    #plt.loglog(omg, res)
+    plt.xscale('log')
+    #plt.yscale('log')
+    plt.xlabel('k [h/Mpc]')
+    plt.ylabel('$\Delta P/P_{CAMB}$')
+    plt.legend()
+    plt.show()'''
 
 
 
