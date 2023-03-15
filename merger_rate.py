@@ -5,7 +5,7 @@ from scipy.special import gamma
 
 def lc_mrate(M0, z, xi=np.linspace(0.1, 0.9, 100), prescription1=True, sig8=sigma8, h=h, kmax=30, window='TopHat',
              prec=1000, om0=om,
-             ol0=oml, omb=omb, camb=False, colos=False):
+             ol0=oml, omb=omb, camb=False, colos=True):
     '''
     Computes the lacy & cole merger rate  (eq 2.18) as a function of the ratio of the two mergers xi = M1/M2 and mass of decendent M0
     '''
@@ -25,7 +25,7 @@ def lc_mrate(M0, z, xi=np.linspace(0.1, 0.9, 100), prescription1=True, sig8=sigm
 
 
 def sph_mrate_per_n(M0, z, xi=np.linspace(0.1, 0.9, 100), sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-                    ol0=oml, omb=omb, camb=False, colos=False):
+                    ol0=oml, omb=omb, camb=False, colos=True):
     ''' Spherical collapse merger rate per halo per unit redshift and mass ratio xi following Fakhouri 2008
     '''
     Mi = M0 * xi / (xi + 1)
@@ -44,7 +44,7 @@ def sph_mrate_per_n(M0, z, xi=np.linspace(0.1, 0.9, 100), sig8=sigma8, h=h, kmax
 
 
 def ell_mrate_per_n(M0, z, xi=np.linspace(0.1, 0.9, 100), sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-                    ol0=oml, omb=omb, camb=False, colos=False):
+                    ol0=oml, omb=omb, camb=False, colos=True):
     '''Ellipsoidal collapse merger rate per halo per unit redshift and mass ratio xi following Zhang, Fahouri and Ma 2008
     '''
     sph = sph_mrate_per_n(M0, z, xi, sig8, h, kmax, window, prec, om0, ol0, omb, camb, colos)
@@ -60,9 +60,10 @@ def ell_mrate_per_n(M0, z, xi=np.linspace(0.1, 0.9, 100), sig8=sigma8, h=h, kmax
     return sph * A0 * np.exp(-0.5 * A1 ** 2 * Sbar) * (1 + A2 * Sbar ** 1.5 * (1 + A1 * Sbar ** 0.5 / gamma(1.5)))
 
 
-def integ_mrate(M0, z, xi_min, xi_max, nxibins=100, mass=False, model='EC', sig8=sigma8, h=h, kmax=30, window='TopHat',
-                prec=1000, om0=om,ol0=oml, omb=omb, camb=False, colos=False):
-    xis = np.linspace(xi_min, xi_max, nxibins)
+def integ_mrate(M0, z, xi_min, xi_max, nxibins=10000, mass=False, model='EC', sig8=sigma8, h=h, kmax=30, window='TopHat',
+                prec=1000, om0=om,ol0=oml, omb=omb, camb=False, colos=True):
+    #xis = np.linspace(xi_min, xi_max, nxibins)
+    xis = np.logspace(np.log10(xi_min), np.log10(xi_max), nxibins)
     dxi = 0.5 * (xis[2:] - xis[:-2])
     if model == 'EC':
         diff_mrate = ell_mrate_per_n(M0, z, xis, sig8, h, kmax, window, prec, om0, ol0, omb, camb, colos)
