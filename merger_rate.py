@@ -1,5 +1,4 @@
 from formation_time import *
-from autograd import grad
 from scipy.special import gamma
 
 
