@@ -1,5 +1,6 @@
 from halo_mass_function import *
-from scipy.integrate import quad
+from autograd import grad
+from math import factorial
 
 
 def upcrossing(M1, M2, z1, z2, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
@@ -70,7 +71,7 @@ def f_ec(S1, S0, w1, w0):
     Sbar = dS / S0
     A3 = A0 ** 2 + 2 * A0 * A1 * np.sqrt(dS * Sbar) / dw
     return A0 * (2 * np.pi) ** (-0.5) * dw * dS ** (-1.5) * \
-           np.exp(-0.5 * A1 ** 2 * Sbar) * (np.exp(-0.5 * A3 * dw ** 2 / dS) + A2 * Sbar ** 1.5 * (
+        np.exp(-0.5 * A1 ** 2 * Sbar) * (np.exp(-0.5 * A3 * dw ** 2 / dS) + A2 * Sbar ** 1.5 * (
                 1 + 2 * A1 * np.sqrt(Sbar / np.pi)))  # equation 5 of Zhang et al. (2008)
 
 
@@ -88,8 +89,36 @@ def f_sc(S1, S0, w1, w0):
     return (2 * np.pi) ** -0.5 * dw * ds ** (-1.5) * np.exp(-0.5 * dw ** 2 / ds)  # lacey&cole multiplicity function
 
 
+def Barrier(s, delta, alpha, beta, a):
+    return np.sqrt(a) * delta * (1 + beta * s ** alpha / (a * delta ** 2) ** alpha)
+
+
+def my_grad(fun, order):
+    for i in range(order):
+        fun = grad(fun)
+    return fun
+
+
+def nth_grad(x, y, axis=0, order=1):
+    dx = np.gradient(x, axis=axis, edge_order=2)
+    dy = np.gradient(y, axis=axis, edge_order=2)
+    if order == 1:
+        return dy / dx
+    for i in range(1, order):
+        dy = np.gradient(dy, axis=axis, edge_order=2)
+    return dy / dx ** order
+
+
+def ngTaylor(s, x0, dB, order, axis=0):
+    res = dB
+    for j in range(1, order):
+        f = nth_grad(s, dB, axis=axis, order=j)
+        res = res + (x0 - s) ** j * f / factorial(j)
+    return res
+
+
 def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=300, om0=om,
-              ol0=oml, omb=omb, camb=False, model='EC', colos=False):
+          ol0=oml, omb=omb, camb=False, model='EC', colos=False, alpha=0.615, beta=0.485, a=0.7, order=3):
     """
      Probability density of a halo of mass M at redshift zi has had a fraction frac of its mass at z=zf.
      :param M: float. mass of the halo considered
@@ -112,24 +141,34 @@ def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='
      """
     S0 = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos) ** 2  # variance of the field at mass M
     w0 = delta_c(zi, om0, ol0)  # critical density at observed redshift
-    if type(zf) == np.ndarray: # for probability distribution. This is to have a parallel version with no for loops
+    if type(zf) == np.ndarray:  # for probability distribution. This is to have a parallel version with no for loops
         mass = np.logspace(np.log10(M * frac), np.log10(M), acc)  # size (0, acc) masses to calculate the integral
-        l = len(zf) # number of steps in PDF
+        l = len(zf)  # number of steps in PDF
         mat_zf = np.array([zf] * acc)  # (acc, l)
         mat_mass = np.array([mass] * l).transpose()  # duplicating mass array to vectoralize calculations (acc, l)
         mat_wf = delta_c(mat_zf, om0, ol0) - w0  # (acc, l)
-        mat_S = sigma(mat_mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos) ** 2 - S0  # variance difference of all masses (acc, l)
-        mat_S[-1, :] = 1e-10 # nonzero value to avoid numerical effects
+        mat_S = sigma(mat_mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb,
+                      colos) ** 2 - S0  # variance difference of all masses (acc, l)
+        mat_S[-1, :] = 1e-10  # nonzero value to avoid numerical effects
         mat_nu = mat_wf / np.sqrt(mat_S)  # (acc, l) peak height
-        if model == 'EC': # Ellipsoidal collapse probability density function
-            mat_f = f_ec(mat_S[:, :] + S0, S0, mat_wf[:, :] + w0, w0) # Computing the multiplicity function at each mass
-            mat_ds = 0.5 * (mat_S[2:, :] - mat_S[:-2, :]) # differential to use to integrate over
+        if model == 'EC':  # Ellipsoidal collapse probability density function
+            mat_f = f_ec(mat_S[:, :] + S0, S0, mat_wf[:, :] + w0,
+                         w0)  # Computing the multiplicity function at each mass
+            mat_ds = 0.5 * (mat_S[2:, :] - mat_S[:-2, :])  # differential to use to integrate over
             return -M * np.sum(mat_ds * mat_f[1:-1, :] / mat_mass[1:-1, :], axis=0)
+        elif model == 'sheth2002':
+            b1 = Barrier(mat_S + S0, mat_wf + w0, alpha, beta, a)
+            b2 = Barrier(S0, w0, alpha, beta, a)
+            dB = b2 - b1
+            T1 = np.abs(ngTaylor(mat_S + S0, S0, dB, axis=0, order=order))
+            gradS = np.gradient(mat_S + S0, axis=0, edge_order=2)
+            mat_f = T1 * np.exp(-0.5 * dB ** 2 / mat_S) / (np.sqrt(2 * np.pi) * mat_S ** 1.5)
+            return -M * np.sum(gradS * mat_f / mat_mass, axis=0)
         else:
             mat_f = fps(mat_nu[:-1, :]) / mat_nu[:-1, :]  # (acc-1, l) # Press & Schechter multiplicity function
             mat_dnu = (mat_nu[2:-1, :] - mat_nu[:-3, :]) * 0.5  # (acc-3, l) # differential to integrate with
             return M * np.sum(mat_dnu * mat_f[1:-1, :] / mat_mass[1:-2, :], axis=0)  # (acc-3, l)
-    else: # case of only one value of redshift to get the probability distribution of.
+    else:  # case of only one value of redshift to get the probability distribution of.
         mass = np.logspace(np.log10(M * frac), np.log10(M), acc)
         wf = delta_c(zf, om0, ol0) - w0
         S = sigma(mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos) ** 2 - S0
@@ -137,6 +176,17 @@ def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='
         nu = wf / np.sqrt(S)
         if model == 'EC':
             f = f_ec(S + S0, S0, wf + w0, w0)
+            ds = 0.5 * (S[2:] - S[:-2])
+            return -M * np.sum(ds * f[1:-1] / mass[1:-1])
+
+        elif model == 'sheth2002':
+            f = np.zeros((acc, 1))
+            for i in range(acc):
+                b1 = Barrier(S[i] + S0, wf[i] + w0, alpha, beta, a)
+                b2 = Barrier(S0, w0, alpha, beta, a)
+                dB = b2 - b1
+                T1 = np.abs(ngTaylor(S[i] + S0, S0, dB, order=order))
+                f[i] = T1 * np.exp(-0.5 * (b1 - b2) ** 2 / S[i]) / (np.sqrt(2 * np.pi) * S[i] ** 1.5)
             ds = 0.5 * (S[2:] - S[:-2])
             return -M * np.sum(ds * f[1:-1] / mass[1:-1])
         else:
@@ -161,12 +211,12 @@ def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20), frac=0.5, acc=
         for mass in masses:
             if diff:
                 prob = proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
-                                 model, colos)
+                             model, colos)
                 dz = zf[2:] - zf[:-2]
-                res.append((prob[2:]-prob[:-2])/dz)
+                res.append((prob[2:] - prob[:-2]) / dz)
             else:
                 res.append(proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
-                                     model, colos))
+                                 model, colos))
         ares = np.array(res)
         return np.sum(ares, axis=0) / len(masses)
     else:
@@ -175,22 +225,20 @@ def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20), frac=0.5, acc=
             w = weights[i] / np.sum(weights)
             if diff:
                 prob = proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
-                                 model, colos)
+                             model, colos)
                 dz = zf[2:] - zf[:-2]
-                res.append(-(prob[2:]-prob[:-2])*w/dz)
+                res.append(-(prob[2:] - prob[:-2]) * w / dz)
             else:
                 res.append(proba(mass, zf, frac, acc, zi, sig8, h, kmax, window, prec, om0, ol0, omb, camb,
-                                     model, colos) * w)
+                                 model, colos) * w)
         ares = np.array(res)
         return np.sum(ares, axis=0)
 
 
-
-def median_formation(M, z, frac=0.5, acc=100, nzeds = 10000, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000,
-                     om0=om, ol0=oml, omb=omb, camb=False, colos=True, outc=False):
+def median_formation(M, z, frac=0.5, acc=100, nzeds=10000, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000,
+                     om0=om, ol0=oml, omb=omb, model='EC', camb=False, colos=True, outc=False):
     """
-    Calculates the median formation redshift of halos of mass M at redshift z, and gets the concentration if needed
-    :param M: float M
+    Calculates the median formation redshift of halos of mass M at redshift z, and gets the concentration if needed    :param M: float M
     :param z: float redshift
     :param outc: bool if True outputs concentration parameter estimation
     :return: float : z50 or c(z50)
@@ -200,7 +248,7 @@ def median_formation(M, z, frac=0.5, acc=100, nzeds = 10000, sig8=sigma8, h=h, k
     zs = np.linspace(z + 0.1, 6 + z, nzeds)
     res = []
     for red in zs:
-        res.append(proba(M, red, frac, acc, z, sig8, h, kmax, window, prec, om0, ol0, omb, camb, 'EC', colos))
+        res.append(proba(M, red, frac, acc, z, sig8, h, kmax, window, prec, om0, ol0, omb, camb, model, colos))
     res = np.array(res)
     zf = np.max(zs[res > 0.5])
     if outc:
@@ -250,6 +298,7 @@ def peak_formation(M, z, frac=0.5, acc=100, sig8=sigma8, h=h, kmax=30, window='T
     else:
         return zf
 
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
@@ -268,8 +317,6 @@ if __name__ == "__main__":
     plt.xlabel('$z_{0}$', size=15)
     plt.ylabel('$z_{formation}$', size=15)
     plt.show()
-
-
 
     # zs = np.linspace(0.1, 2, 50)
     # masses = [1e8, 1e11, 1e14]
@@ -291,5 +338,5 @@ if __name__ == "__main__":
     # M = np.logspace(8, 14, 100)
     # zfs = np.linspace(0.05, 2, 50)
     # plt.plot(M, median_formation(1e13, z=0.1, colos=False))
-    #plt.plot(zfs, proba(1e13, zfs, prec=500, acc=400))
-    #print(proba(1e13, 0.3))
+    # plt.plot(zfs, proba(1e13, zfs, prec=500, acc=400))
+    # print(proba(1e13, 0.3))

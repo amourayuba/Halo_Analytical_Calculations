@@ -80,7 +80,7 @@ def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat
 
 
 def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000,
-        out='hmf', model = 'sheth', A=0.322, a=0.707, p=0.3, camb=False):
+        out='hmf', model='sheth', A=0.322, a=0.707, p=0.3, camb=False):
     """
 
     :param M: float or array: mass or array of mass. If array, minimum size = 3.
