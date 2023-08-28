@@ -1,5 +1,5 @@
 # Analytical Calculations of Halo Mass Function and Age 
-This project allows to calculate a variety of dynamical properties. Different files and functions allow contain 
+This project allows to calculate a variety of dynamical properties. Different files and functions contain 
 analytical predictions of a variety of cosmological properties, including the power-spectrum, growth 
 factor, distribution as a function of mass and redshift and formation time.
  
