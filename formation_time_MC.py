@@ -1,8 +1,9 @@
-from formation_time import *
-from scipy import special
+import numpy as np
+import cosmo_parameters as cp
+from fluctuation_rms import  sigma
 
-def parkinson08(zi, Mi, Mres, zf, dz = 1e-3,frac=0.5, acc=10000, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-          ol0=oml, omb=omb, camb=False, model='sheth', colos=True, A=0.5, a=1, p=0):
+def parkinson08(zi, Mi, Mres, zf, dz = 1e-3,frac=0.5, acc=10000, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000, om0=cp.om,
+          ol0=cp.oml, omb=cp.omb, camb=False, colos=True):
     zs = np.arange(zi, zf, dz)
     mass_tree = [[Mi]]
     for i in range(len(zs)-1):
@@ -11,8 +12,8 @@ def parkinson08(zi, Mi, Mres, zf, dz = 1e-3,frac=0.5, acc=10000, sig8=sigma8, h=
             if M > 5*Mres:
                 R = np.random.uniform(0,1)
                 S0 = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2 #variance of the field at mass M
-                w0 = delta_c(zs[i], om0, ol0)  #critical density at observed redshift
-                dw = delta_c(zs[i+1], om0, ol0) - w0
+                w0 = cp.delta_c(zs[i], om0, ol0)  #critical density at observed redshift
+                dw = cp.delta_c(zs[i+1], om0, ol0) - w0
                 M1s = np.logspace(np.log10(Mres), np.log10(frac*M), acc)
                 S1s = sigma(M1s, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos)**2 #variance of the field at mass M
                 dS1 = (S1s[2:] - S1s[:-2])*0.5

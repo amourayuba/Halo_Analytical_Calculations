@@ -1,6 +1,7 @@
-from __future__ import division
-from power_spectrum_analytic import *
+import power_spectrum_analytic as psa
+import cosmo_parameters as cp
 from colossus.cosmology import cosmology
+import numpy as np
 
 cosmo = cosmology.setCosmology('planck15');
 
@@ -23,7 +24,7 @@ def W_ksharp(k, R):
     return (k * R <= 1) + 0
 
 
-def power_spectrum(k, sigma8=sigma8, h=h, om0=om, omb=omb, ns=ns, test=False):
+def power_spectrum(k, sigma8=cp.sigma8, h=cp.h, om0=cp.om, omb=cp.omb, ns=cp.ns, test=False):
     """
     Power spectrum from analytical approx of Eisenstein and Hu
     :param k: float: wavenumber
@@ -36,14 +37,14 @@ def power_spectrum(k, sigma8=sigma8, h=h, om0=om, omb=omb, ns=ns, test=False):
     :return: float : power spectrum
     """
     if test:
-        return k ** ns * Transfer(k * h, om0, omb, h) ** 2  # getting a first value
+        return k ** ns * psa.transfer(k * h, om0, omb, h) ** 2  # getting a first value
     else:
         val_8 = sigma_R(8, sigma8, h, omb, om0, test=True)  # getting the value of sigma8
-        return (sigma8 / val_8) ** 2 * k ** ns * Transfer(k * h, om0, omb,
+        return (sigma8 / val_8) ** 2 * k ** ns * psa.transfer(k * h, om0, omb,
                                                           h) ** 2  # normalising by the value of sigma8 we want
 
 
-def Delta(k, sigma8=sigma8, h=h, om0=om, omb=omb, ns=ns):
+def Delta(k, sigma8=cp.sigma8, h=cp.h, om0=cp.om, omb=cp.omb, ns=cp.ns):
     """
     dimenstionless power spectrum function
     :param k: float: wavenumber
@@ -58,7 +59,7 @@ def Delta(k, sigma8=sigma8, h=h, om0=om, omb=omb, ns=ns):
     return np.sqrt(k ** 3 * power_spectrum(k, sigma8, h, om0, omb, ns) / (2 * np.pi ** 2))
 
 
-def camb_power_spectrum(h=h, ombh2=ombh2, omch2=omch2, ns=ns, sig8=sigma8, kmin=2e-5, kmax=100, linear=True,
+def camb_power_spectrum(h=cp.h, ombh2=cp.ombh2, omch2=cp.omch2, ns=cp.ns, sig8=cp.sigma8, kmin=2e-5, kmax=100, linear=True,
                         npoints=1000, nonlinear=False, omk=0.0, cosmomc_theta=None, thetastar=None,
                         neutrino_hierarchy='degenerate', num_massive_neutrinos=1, mnu=0.06, nnu=3.046, YHe=None,
                         meffsterile=0.0, standard_neutrino_neff=3.046, TCMB=2.7255, tau=None, deltazrei=None, Alens=1.0,
@@ -100,7 +101,7 @@ def camb_power_spectrum(h=h, ombh2=ombh2, omch2=omch2, ns=ns, sig8=sigma8, kmin=
         return ([kh, zs, norm * pk[0]], [kh_nonlin, z_nonlin, norm * pk_nonlin[0]])
 
 
-def sigma_R(R, sig8=sigma8, h=h, omb=omb, om0=om, ol0=oml, ns=ns, kmax=30, prec=1000, window=W_th, camb=False,
+def sigma_R(R, sig8=cp.sigma8, h=h, omb=cp.omb, om0=cp.om, ol0=cp.oml, ns=cp.ns, kmax=30, prec=1000, window=W_th, camb=False,
             test=False, Colos=False):
     """
     fluctuation rms of smoothed field with a scale R
@@ -182,8 +183,8 @@ def sigma_R(R, sig8=sigma8, h=h, omb=omb, om0=om, ol0=oml, ns=ns, kmax=30, prec=
                 return np.sqrt(integ / (2 * np.pi ** 2))
 
 
-def sigma(x, sig8=sigma8, h=h, kmax=30, window='TopHat', xin='M', prec=1000, om0=om, ol0=oml, omb=omb,
-          camb=False, Colos=False):
+def sigma(x, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', xin='M', prec=1000, om0=cp.om, ol0=cp.oml, omb=cp.omb,
+          camb=False, Colos=False, ns=cp.ns):
     """
     fluctuation rms of smoothed field with a scale R or of a mass M
     :param x : float: either M mass in Msun/h or smoothin scale R in Mpc/h
@@ -211,13 +212,13 @@ def sigma(x, sig8=sigma8, h=h, kmax=30, window='TopHat', xin='M', prec=1000, om0
             return sigma_R(x, sig8, h, omb, om0, ol0, ns, kmax, prec, W_ksharp, camb, Colos=Colos)
     elif xin == 'M':
         if window == 'TopHat':
-            R = (3 * x / (4 * np.pi * rho_m(0, om0))) ** (1 / 3)
+            R = (3 * x / (4 * np.pi * cp.rho_m(0, om0))) ** (1 / 3)
             return sigma_R(R, sig8, h, omb, om0, ol0, ns, kmax, prec, W_th, camb, Colos=Colos)
         elif window == 'Gauss':
-            R = (x / rho_m(0, om0)) ** (1 / 3) / np.sqrt(np.pi)
+            R = (x / cp.rho_m(0, om0)) ** (1 / 3) / np.sqrt(np.pi)
             return sigma_R(R, sig8, h, omb, om0, ol0, ns, kmax, prec, W_gauss, camb, Colos=Colos)
         elif window == 'k-Sharp':
-            R = (x / (6 * np.pi ** 2 * rho_m(0, om0))) ** (1 / 3)
+            R = (x / (6 * np.pi ** 2 * cp.rho_m(0, om0))) ** (1 / 3)
             return sigma_R(R, sig8, h, omb, om0, ol0, ns, kmax, prec, W_ksharp, camb, Colos=Colos)
 
 

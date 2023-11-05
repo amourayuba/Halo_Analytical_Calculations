@@ -1,13 +1,13 @@
-from __future__ import division
+import numpy as np
 from colossus.lss import mass_function
 from colossus.lss import peaks
-from fluctuation_rms import *
+from colossus.cosmology import cosmology
+import cosmo_parameters as cp
+import fluctuation_rms as fm
 
-
-my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om, 'Ode0': oml, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
-cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
-
-
+base_cosmo = {'flat': True, 'H0': 100 * cp.h, 'Om0': cp.om, 'Ode0': cp.oml, 'Ob0': cp.omb, 'sigma8': cp.sigma8,
+            'ns': cp.ns}
+cosmology.setCosmology('my_cosmo', base_cosmo)
 
 
 ########################################################################################################################
@@ -23,7 +23,8 @@ def fps(nu):
     :param nu: float or array of floats : peak height
     :return: float or array of floats.
     """
-    return nu*np.sqrt(2/np.pi)*np.exp(-nu**2/2)
+    return nu * np.sqrt(2 / np.pi) * np.exp(-nu ** 2 / 2)
+
 
 def nufnu_st(nu, A=0.322, a=0.707, p=0.3):
     """
@@ -35,10 +36,12 @@ def nufnu_st(nu, A=0.322, a=0.707, p=0.3):
     :return:
     :return:
     """
-    nup = np.sqrt(a)*nu
-    return A*(1 + 1/nup**(2*p))*fps(nup)
+    nup = np.sqrt(a) * nu
+    return A * (1 + 1 / nup ** (2 * p)) * fps(nup)
 
-def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, camb=False, Colos=False):
+
+def nu(M, z, om0=cp.om, ol0=cp.oml, omb=cp.omb, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000, camb=False,
+       Colos=False):
     """
     peak height from press and schechter 74. delta_c/sigma
     :param M: float or array of floats : mass
@@ -56,20 +59,20 @@ def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat
     :return: peak height
     """
     if Colos:
-        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sig8, 'ns': ns}
-        cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sig8, 'ns': cp.ns}
+        cosmology.setCosmology('my_cosmo', my_cosmo)
         return peaks.peakHeight(M, z)
     else:
-        del_c = delta_c(z, om0, ol0)  #critical overdensity
-        sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb)  #fluctuation rms
-        if (type(z)==np.ndarray) and (type(M)==np.ndarray):   #case multiple redshifts and mass
+        del_c = cp.delta_c(z, om0, ol0)  # critical overdensity
+        sig = fm.sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb)  # fluctuation rms
+        if (type(z) == np.ndarray) and (type(M) == np.ndarray):  # case multiple redshifts and mass
             l = len(z)
             n = len(M)
-            mat_del_c = np.array([del_c]*n)   #duplicating arrays to do vectorial calculations
-            mat_sig = np.array([sig]*l).transpose() #duplicating arrays to do vectorial calculations
-            return mat_del_c/mat_sig
+            mat_del_c = np.array([del_c] * n)  # duplicating arrays to do vectorial calculations
+            mat_sig = np.array([sig] * l).transpose()  # duplicating arrays to do vectorial calculations
+            return mat_del_c / mat_sig
         else:
-            return del_c/sig
+            return del_c / sig
 
 
 ########################################################################################################################
@@ -79,7 +82,7 @@ def nu(M, z, om0=om, ol0=oml, omb=omb, sig8=sigma8, h=h, kmax=30, window='TopHat
 ########################################################################################################################
 
 
-def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30, prec=1000,
+def hmf(M, z=0, window='TopHat', sig8=cp.sigma8, om0=cp.om, ol0=cp.oml, omb=cp.omb, h=cp.h, kmax=30, prec=1000,
         out='hmf', model='sheth', A=0.322, a=0.707, p=0.3, camb=False):
     """
 
@@ -98,103 +101,108 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
     :param model: string : Halo Mass Function model. Either Sheth & Tormen 2001 or Press & Schechter 1973
     :return: float, array of floats.
     """
-    if type(z)==np.ndarray:   #case multiple redshifts
+    if type(z) == np.ndarray:  # case multiple redshifts
         l = len(z)
-        del_c = delta_c(z, om0, ol0)  #critical density array shape (l, )
+        del_c = cp.delta_c(z, om0, ol0)  # critical density array shape (l, )
 
-        if type(M) == np.ndarray or type(M) == list:   #case M is an array
-            n = len(M)-2                               # n - 2 because we will do a derivative
-            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) # array of fluctiation rmsshape : (n,)
-            dlsig = np.log(sig[2:] / sig[:-2])            # differential of sigma. shape : (n-2, )
-            dlM = np.log(M[2:] / M[:-2])        # differential of mass shape : (n-2, )
-            new_sig = (sig[2:] + sig[:-2]) * 0.5    #averaging to get the same size as dlsig. shape : (n-2, )
-            new_m = (M[2:] + M[:-2]) * 0.5        # averaging to get the same size as dlM shape : (n-2, )
+        if type(M) == np.ndarray or type(M) == list:  # case M is an array
+            n = len(M) - 2  # n - 2 because we will do a derivative
+            sig = fm.sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb,
+                        camb)  # array of fluctiation rmsshape : (n,)
+            dlsig = np.log(sig[2:] / sig[:-2])  # differential of sigma. shape : (n-2, )
+            dlM = np.log(M[2:] / M[:-2])  # differential of mass shape : (n-2, )
+            new_sig = (sig[2:] + sig[:-2]) * 0.5  # averaging to get the same size as dlsig. shape : (n-2, )
+            new_m = (M[2:] + M[:-2]) * 0.5  # averaging to get the same size as dlM shape : (n-2, )
 
-            mat_new_m = np.array([new_m]*l)  #duplicating array of mass shape (l, n-2)
-            mat_new_sig = np.array([new_sig] * l)  #duplicating array of sigma shape (l, n-2)
-            mat_del_c = np.array([del_c]*n).transpose()  #duplicating array of critical density shape (l, n-2)
+            mat_new_m = np.array([new_m] * l)  # duplicating array of mass shape (l, n-2)
+            mat_new_sig = np.array([new_sig] * l)  # duplicating array of sigma shape (l, n-2)
+            mat_del_c = np.array([del_c] * n).transpose()  # duplicating array of critical density shape (l, n-2)
 
-            ra1 = rho_m(z=0, om0=om0) / mat_new_m ** 2        #part 1 of Press and Schechter hmf shape : (l, n-2 )
-            #part 2 of PS : multiplicity function shape : (l, n-2)
-            nu = mat_del_c/mat_new_sig
-            #ra2 = np.exp(-mat_del_c ** 2 / (2 * mat_new_sig ** 2)) * np.sqrt(2 / np.pi) * mat_del_c / mat_new_sig
+            ra1 = cp.rho_m(z=0, om0=om0) / mat_new_m ** 2  # part 1 of Press and Schechter hmf shape : (l, n-2 )
+            # part 2 of PS : multiplicity function shape : (l, n-2)
+            nu = mat_del_c / mat_new_sig
+            # ra2 = np.exp(-mat_del_c ** 2 / (2 * mat_new_sig ** 2)) * np.sqrt(2 / np.pi) * mat_del_c / mat_new_sig
             if model == 'sheth':
-                ra2 = nufnu_st(nu, A, a, p)  #using sheth and tormen multiplicity function
+                ra2 = nufnu_st(nu, A, a, p)  # using sheth and tormen multiplicity function
             else:
                 ra2 = fps(nu)
-            ra3 = np.array([dlsig / dlM]*l)  #part 3 of Press and Schechter hmf
+            ra3 = np.array([dlsig / dlM] * l)  # part 3 of Press and Schechter hmf
             if out == 'hmf':
-                return -ra1 * ra2 * ra3  #number density of halos per unit M
+                return -ra1 * ra2 * ra3  # number density of halos per unit M
             elif out == 'dndlnM':
-                return -mat_new_m * ra1 * ra2 * ra3  #number density of halos per unit logM
+                return -mat_new_m * ra1 * ra2 * ra3  # number density of halos per unit logM
             elif out == 'dimensionless':
-                return -ra2 * ra3    #multiplicity function
-        else:    #case of unique M
-            nM = np.array([0.99999 * M, 1.00001 * M])     #to get a derivative at M
-            sig = sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb) #get sigma for values close to M
-            dlsig = np.log(sig[1:] / sig[:-1])    #differential of log sigma at M
-            dlM = np.log(nM[1:] / nM[:-1])        # differential of log M at M
+                return -ra2 * ra3  # multiplicity function
+        else:  # case of unique M
+            nM = np.array([0.99999 * M, 1.00001 * M])  # to get a derivative at M
+            sig = fm.sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb,
+                        camb=camb)  # get sigma for values close to M
+            dlsig = np.log(sig[1:] / sig[:-1])  # differential of log sigma at M
+            dlM = np.log(nM[1:] / nM[:-1])  # differential of log M at M
             new_sig = (sig[1:] + sig[:-1]) * 0.5  # taking the average as the value for sigma(M) to be symetric wr M
-            new_m = (nM[1:] + nM[:-1]) * 0.5      #same. To be symmetric
-            nu = del_c/new_sig                   #peak height
+            new_m = (nM[1:] + nM[:-1]) * 0.5  # same. To be symmetric
+            nu = del_c / new_sig  # peak height
             if model == 'sheth':
 
-                ra2 = nufnu_st(nu, A, a, p)    #using sheth and tormen multiplicity function
+                ra2 = nufnu_st(nu, A, a, p)  # using sheth and tormen multiplicity function
             else:
-                ra2 = fps(nu)         #Press and schechter multiplicity function
-            ra1 = rho_m(z=0, om0=om0)/new_m ** 2     #density normalisation of the halo mass function
-            ra3 = dlsig / dlM  #part 3 of PS halo mass function
+                ra2 = fps(nu)  # Press and schechter multiplicity function
+            ra1 = cp.rho_m(z=0, om0=om0) / new_m ** 2  # density normalisation of the halo mass function
+            ra3 = dlsig / dlM  # part 3 of PS halo mass function
 
             if out == 'hmf':
-                return -ra1 * ra2 * ra3 #number density of halos per unit M
+                return -ra1 * ra2 * ra3  # number density of halos per unit M
             elif out == 'dndlnM':
-                return -new_m * ra1 * ra2 * ra3  #number density of halos per unit logM
+                return -new_m * ra1 * ra2 * ra3  # number density of halos per unit logM
             elif out == 'dimensionless':
-                return -ra2 * ra3   #multiplicity function
-    else: #case of unique z
-        del_c = delta_c(z, om0, ol0)
+                return -ra2 * ra3  # multiplicity function
+    else:  # case of unique z
+        del_c = cp.delta_c(z, om0, ol0)
         if type(M) == np.ndarray or type(M) == list:
-            sig = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)  #fluctuation rms
-            dlsig = np.log(sig[2:]/sig[:-2])  #differential of log sigma
-            dlM = np.log(M[2:]/M[:-2])   # differential of log M
-            new_sig = (sig[2:]+sig[:-2])*0.5 #averaged sigma. Difference of 2 to be symmetric and avoid boundary pbs
-            new_m = (M[2:]+M[:-2])*0.5  #same. To be symmetric
+            sig = fm.sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb)  # fluctuation rms
+            dlsig = np.log(sig[2:] / sig[:-2])  # differential of log sigma
+            dlM = np.log(M[2:] / M[:-2])  # differential of log M
+            new_sig = (sig[2:] + sig[
+                                 :-2]) * 0.5  # averaged sigma. Difference of 2 to be symmetric and avoid boundary pbs
+            new_m = (M[2:] + M[:-2]) * 0.5  # same. To be symmetric
 
-            nu = del_c/new_sig      #Peak height
+            nu = del_c / new_sig  # Peak height
             if model == 'sheth':
-                ra2 = nufnu_st(nu, A, a, p) #using sheth and tormen multiplicity function
+                ra2 = nufnu_st(nu, A, a, p)  # using sheth and tormen multiplicity function
             else:
-                ra2 = fps(nu) #Press and schechter multiplicity function
-            ra1 = rho_m(z=0, om0=om0)/new_m**2 #density normalisation of the halo mass function
-            ra3 = dlsig/dlM  #part 3 of PS halo mass function
-            if out=='hmf':
-                return -ra1*ra2*ra3  #number density of halos per unit M
-            elif out =='dndlnM':
-                return -new_m*ra1*ra2*ra3 #number density of halos per unit logM
+                ra2 = fps(nu)  # Press and schechter multiplicity function
+            ra1 = cp.rho_m(z=0, om0=om0) / new_m ** 2  # density normalisation of the halo mass function
+            ra3 = dlsig / dlM  # part 3 of PS halo mass function
+            if out == 'hmf':
+                return -ra1 * ra2 * ra3  # number density of halos per unit M
+            elif out == 'dndlnM':
+                return -new_m * ra1 * ra2 * ra3  # number density of halos per unit logM
             elif out == 'dimensionless':
-                return -ra2*ra3   #multiplicity function
+                return -ra2 * ra3  # multiplicity function
         else:
-            nM = np.array([0.99999*M, 1.00001*M]) #to get a derivative at M
-            sig = sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb=camb) #get sigma for values close to M
-            dlsig = np.log(sig[1:] / sig[:-1]) #differential of log sigma at M
-            dlM = np.log(nM[1:] / nM[:-1]) # differential of log M at M
-            new_sig = (sig[1:] + sig[:-1]) * 0.5 # taking the average as the value for sigma(M) to be symetric wr M
-            new_m = (nM[1:] + nM[:-1]) * 0.5  #same. To be symmetric
-            nu = del_c/new_sig       #peak height
+            nM = np.array([0.99999 * M, 1.00001 * M])  # to get a derivative at M
+            sig = fm.sigma(nM, sig8, h, kmax, window, 'M', prec, om0, ol0, omb,
+                        camb=camb)  # get sigma for values close to M
+            dlsig = np.log(sig[1:] / sig[:-1])  # differential of log sigma at M
+            dlM = np.log(nM[1:] / nM[:-1])  # differential of log M at M
+            new_sig = (sig[1:] + sig[:-1]) * 0.5  # taking the average as the value for sigma(M) to be symetric wr M
+            new_m = (nM[1:] + nM[:-1]) * 0.5  # same. To be symmetric
+            nu = del_c / new_sig  # peak height
             if model == 'sheth':
-                ra2 = nufnu_st(nu, A, a, p)  #using sheth and tormen multiplicity function
+                ra2 = nufnu_st(nu, A, a, p)  # using sheth and tormen multiplicity function
             else:
-                ra2 = fps(nu)     #Press and schechter multiplicity function
+                ra2 = fps(nu)  # Press and schechter multiplicity function
 
-            ra1 = rho_m(z=0, om0=om0)/new_m ** 2 #density normalisation of the halo mass function
-            ra3 = dlsig / dlM   #part 3 of PS halo mass function
+            ra1 = cp.rho_m(z=0, om0=om0) / new_m ** 2  # density normalisation of the halo mass function
+            ra3 = dlsig / dlM  # part 3 of PS halo mass function
 
-            if out=='hmf':
-                return -ra1*ra2*ra3 #number density of halos per unit M
-            elif out =='dndlnM':
-                return -new_m*ra1*ra2*ra3 #number density of halos per unit logM
+            if out == 'hmf':
+                return -ra1 * ra2 * ra3  # number density of halos per unit M
+            elif out == 'dndlnM':
+                return -new_m * ra1 * ra2 * ra3  # number density of halos per unit logM
             elif out == 'dimensionless':
-                return -ra2*ra3 #multiplicity function
+                return -ra2 * ra3  # multiplicity function
+
 
 ########################################################################################################################
 
@@ -203,8 +211,8 @@ def hmf(M, z=0, window='TopHat', sig8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kma
 ########################################################################################################################
 
 
-def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb, sigma8 = sigma8,
-               prec = 1000, kmax=100, window='TopHat', camb=False, Colossus=False):
+def Mstar(lMmin=6, lMmax=15, npoints=10000, z=0, h=cp.h, om0=cp.om, ol0=cp.oml, omb=cp.omb, sigma8=cp.sigma8,
+          prec=1000, kmax=100, window='TopHat', camb=False, Colossus=False):
     """
     Caracteristic non-linear mass
     :param lMmin: float : log lower mass limit
@@ -223,20 +231,19 @@ def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb
     :return: float : caracteristic non linear mass
     """
     if Colossus:
-        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
-        cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': cp.ns}
+        cosmology.setCosmology('my_cosmo', my_cosmo)
         return peaks.nonLinearMass(z)
     else:
         mass = np.logspace(lMmin, lMmax, npoints)
-        res = nu(mass, z, om0, ol0, omb, sigma8,h, kmax, window, prec, camb)
+        res = nu(mass, z, om0, ol0, omb, sigma8, h, kmax, window, prec, camb)
         if type(z) == np.ndarray:
-            l = len(z)           #res shape (n x l)
-            mat_mass = np.array([mass]*l).transpose()
-            new_mass = np.where(res>1, mat_mass, np.inf)
+            l = len(z)  # res shape (n x l)
+            mat_mass = np.array([mass] * l).transpose()
+            new_mass = np.where(res > 1, mat_mass, np.inf)
             return np.min(new_mass, axis=0)
         else:
-            return np.min(mass[res>1])
-
+            return np.min(mass[res > 1])
 
 
 ########################################################################################################################
@@ -246,7 +253,7 @@ def Mstar(lMmin=6, lMmax=15, npoints = 10000, z=0, h=h, om0=om, ol0=oml, omb=omb
 ########################################################################################################################
 
 
-def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,prec=100,
+def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=cp.sigma8, om0=cp.om, ol0=cp.oml, omb=cp.omb, h=cp.h, kmax=30, prec=100,
       acc=int(1e4), Colos=False, differential=True, z2=None, prec2=None, camb=False):
     """
     Number of structures of mass greater than M detected at redshift z within a given solid angle
@@ -277,7 +284,7 @@ def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=sigma8, om0=om, ol0=o
     if differential:
         vol = cosmo.differential_comoving_volume(z).value * h ** 3
         Ntot = nofm_man(M, lMmax, z, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos, camb)
-        return Ntot*solid_angle*vol
+        return Ntot * solid_angle * vol
     elif Colos:
         zs = np.linspace(z, z2, prec2)
         res = []
@@ -286,13 +293,13 @@ def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=sigma8, om0=om, ol0=o
         for el in zs:
             res.append(nofm_man(M, lMmax, el, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos, camb))
         res = np.array(res)
-        return np.sum(res*vol)*dz*solid_angle
+        return np.sum(res * vol) * dz * solid_angle
     else:
         zs = np.linspace(z, z2, prec2)
         vol = cosmo.differential_comoving_volume(zs).value * h ** 3
         dz = (z2 - z) / prec2
         Nofz = nofm_man(M, lMmax, zs, window, sigma8, om0, ol0, omb, h, kmax, prec, acc, Colos, camb)
-        return np.sum(Nofz*vol)*dz*solid_angle
+        return np.sum(Nofz * vol) * dz * solid_angle
 
 
 ########################################################################################################################
@@ -302,9 +309,8 @@ def N(z, M, solid_angle, lMmax=20, window='TopHat', sigma8=sigma8, om0=om, ol0=o
 ########################################################################################################################
 
 
-
-def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
-         prec=300, Colos = False, camb=False):
+def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=cp.sigma8, om0=cp.om, ol0=cp.oml, omb=cp.omb, h=cp.h, kmax=30,
+         prec=300, Colos=False, camb=False):
     """
     Number density of halos more massive than M. Integrated using scipy quad
     :param lMmax: float : upper bound limit for integration
@@ -324,19 +330,20 @@ def nofm(M, lMmax=18, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=
     :return:
     """
     from scipy.integrate import quad
-    if Colos :
-        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
+    if Colos:
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': cp.ns}
         cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+
         def dn(x):
-            return np.exp(x)*mass_function.massFunction(np.exp(x), z, model='press74', q_out='dndlnM')
-    else :
-        def dn(x):       #define function to integrate
-            return np.exp(x)*hmf(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
-    return quad(dn, np.log(M), lMmax*np.log(10))[0]
+            return np.exp(x) * mass_function.massFunction(np.exp(x), z, model='press74', q_out='dndlnM')
+    else:
+        def dn(x):  # define function to integrate
+            return np.exp(x) * hmf(np.exp(x), z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
+    return quad(dn, np.log(M), lMmax * np.log(10))[0]
 
 
-def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, omb=omb, h=h, kmax=30,
-                     prec=100, acc=int(1e4), Colos=False, camb=False, out='hmf'):
+def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=cp.sigma8, om0=cp.om, ol0=cp.oml, omb=cp.omb, h=cp.h, kmax=30,
+             prec=100, acc=int(1e4), Colos=False, camb=False, out='hmf'):
     """
     Number density of halos more massive than M. Integrated using simple sum.
     :param lMmax: float : upper bound limit for integration
@@ -354,31 +361,26 @@ def nofm_man(M, lMmax=20, z=0, window='TopHat', sigma8=sigma8, om0=om, ol0=oml, 
     :param Colos : boolan : using Colossus halo mass function or not
     :param camb: boolean : if using camb spectrum or analytical version of Eisenstein and Hu
     """
-    Ms = np.logspace(np.log10(M), lMmax, acc)   #array of mass
-    dlM = np.log(10)*(lMmax-np.log10(M))/acc    #differential in log mass
+    Ms = np.logspace(np.log10(M), lMmax, acc)  # array of mass
+    dlM = np.log(10) * (lMmax - np.log10(M)) / acc  # differential in log mass
 
-    if Colos :
-        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': ns}
-        cosmo = cosmology.setCosmology('my_cosmo', my_cosmo)
+    if Colos:
+        my_cosmo = {'flat': True, 'H0': 100 * h, 'Om0': om0, 'Ode0': ol0, 'Ob0': omb, 'sigma8': sigma8, 'ns': cp.ns}
+        cosmology.setCosmology('my_cosmo', my_cosmo)
         y = mass_function.massFunction(Ms[1:-1], z, model='press74', q_out='dndlnM')
-        return np.sum(y*dlM)
+        return np.sum(y * dlM)
     elif type(z) == np.ndarray:
         y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out='hmf', camb=camb)
         l, m = y.shape
-        mat_Ms = np.array([Ms[1:-1]]*l)
-        return np.sum(mat_Ms*dlM*y, axis=1)
+        mat_Ms = np.array([Ms[1:-1]] * l)
+        return np.sum(mat_Ms * dlM * y, axis=1)
     else:
         y = hmf(Ms, z, window, sigma8, om0, ol0, omb, h, kmax, prec, out=out, camb=camb)
-        return np.sum(dlM*y)
-
-
-
-
+        return np.sum(dlM * y)
 
 
 if __name__ == "__main__":
     #######################-------------------------------Halo Mass Function plot----------------###########################
-
 
     '''import matplotlib.pyplot as plt
     params = {'legend.fontsize': 20,
@@ -482,11 +484,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()'''
 
-
-
-
-
-
     ################-------------------Peak Heigh CAMB-COLOSSUS COMPARISON------------###################################
     '''import matplotlib.pyplot as plt
     M = np.logspace(9, 17, 1000)
@@ -502,7 +499,6 @@ if __name__ == "__main__":
     plt.ylabel(r'$\nu$', size=15)
     plt.legend()
     plt.show()'''
-
 
     # import matplotlib.pyplot as plt
     # M = np.logspace(9, 17, 1000)
@@ -541,7 +537,6 @@ if __name__ == "__main__":
     plt.ylim(1.2, 3.7)
     #plt.title('Peak Heght at M=4e13 $M_\odot /h$')
     plt.show()'''
-
 
     '''import matplotlib.pyplot as plt
     zs = np.linspace(0,2, 100)
@@ -589,7 +584,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()'''
 
-
     '''import matplotlib.pyplot as plt
     omegam = np.linspace(0.15, 0.6, 30)
     Ms = [1e8, 1e10, 1e12, 1e13, 1e14]
@@ -605,9 +599,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()'''
 
-
     ######################----------------------- Multiplicity function plot------------------##############################
-
 
     ######################---------------------- Comparison with collossus---------------###################################
     # import matplotlib.pyplot as plt
@@ -647,7 +639,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()'''
 
-
     ##########################------------  same : omega_m evolution--------------------------##############################
 
     '''import matplotlib.pyplot as plt
@@ -669,13 +660,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()'''
 
-
-
-
-
-
-
-
     ########################---------------------------Plotting M_\star----------------#####################################
 
     '''import matplotlib.pyplot as plt
@@ -693,7 +677,6 @@ if __name__ == "__main__":
     plt.title('Press and Schechter caracteristic non linear mass', size=15)
     plt.legend()
     plt.show()'''
-
 
     '''import matplotlib.pyplot as plt
     om = np.linspace(0.1, 0.8, 50)
@@ -715,7 +698,6 @@ if __name__ == "__main__":
     plt.title('Press and Schechter caracteristic non linear mass', size=15)
     plt.show()'''
 
-
     '''import matplotlib.pyplot as plt
     s8 = np.linspace(0.1, 1.5, 50)
     res = []
@@ -735,7 +717,6 @@ if __name__ == "__main__":
     plt.title('Press and Schechter caracteristic non linear mass', size=15)
     plt.legend()
     plt.show()'''
-
 
     #####################------------------------omega_m vs sigma8 Mstar=const-----------------------######################"
 
@@ -782,10 +763,7 @@ if __name__ == "__main__":
         plt.title('z = '+str(el), size = 20)
         plt.show()'''
 
-
-
     #########################------------------------PLOTS OF VARIOUS QUANTITIES----------------############################
-
 
     '''import matplotlib.pyplot as plt
     Ms = np.logspace(8, 14, 100)
@@ -866,9 +844,6 @@ if __name__ == "__main__":
     plt.title(r'$n(>4\times10^{13})$')
     plt.show()'''
 
-
-
-
     '''import matplotlib.pyplot as plt
     size = 15
     omv = np.linspace(0.15, 0.5, size)
@@ -898,4 +873,3 @@ if __name__ == "__main__":
         plt.xticks(size=15)
         plt.yticks(size=15)
         plt.show()'''
-

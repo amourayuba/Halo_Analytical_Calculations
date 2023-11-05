@@ -1,5 +1,5 @@
-from __future__ import division
 import numpy as np
+from astropy.cosmology import LambdaCDM, z_at_value
 
 ### Fundamental set of parameters
 G = 4.30091e-9   #Units Mpc/Msun x (km/s)^2
@@ -86,6 +86,12 @@ def delta_c(z, om0=om, ol0=oml):
 def delta_ec(z, sig, om0=om, ol0=oml):
     return np.sqrt(0.707)*delta_c(z, om0, ol0)*(1 + 0.47*(sig**2/delta_c(z, om0, ol0)**2)**0.615)
 
+def infall_time(z, h=h, om=om):
+    cosmo = LambdaCDM(H0=100*h, Om0=om, Ode0=1-om)
+    infall = 1.44 / hubble_ratio(z, omega_m0=om, omega_l0=1-om)
+    ages = cosmo.age(z).value
+    zi = z_at_value(cosmo.age, (ages-infall) * u.Gyr)
+    return infall, zi-z
 
 
 #######################################------------PLOTS --------------------------#####################################

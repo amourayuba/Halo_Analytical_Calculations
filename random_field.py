@@ -1,7 +1,10 @@
-from fluctuation_rms import *
+import numpy as np
+from fluctuation_rms import power_spectrum
+import cosmo_parameters as cp
 
 
-def sig(sig8=sigma8, h=h, omb=omb, om0=om, ns=ns, test= False, prec=1000):
+
+def sig(sig8=cp.sigma8, h=cp.h, omb=cp.omb, om0=cp.om, ns=cp.ns, test= False, prec=1000):
 
 
     prec=10*prec   # having more bins is less expensive than in the camb power spectrum case
@@ -16,11 +19,7 @@ def sig(sig8=sigma8, h=h, omb=omb, om0=om, ns=ns, test= False, prec=1000):
     integ = np.sum(res) * dlk  # approximate evaluation of the integral through k.
     return np.sqrt(integ / (2 * np.pi ** 2))
 
-size = 1000
-si = sig()
 
-Rmax = 10
-dr = Rmax/size
 def ksharp(r, R):
     x = r/R
     ra1 = 3*(np.sin(x) - x*np.cos(x))/x**3
@@ -29,9 +28,7 @@ def ksharp(r, R):
 def gaussian(r, R):
     return np.exp(-r**2/(2*R**2))*(2*np.pi*R**2)**(-1.5)
 
-radius = np.logspace(-5, np.log10(Rmax), size)
-dlr = (np.log(Rmax) - np.log(1e-5))/size
-#radius = np.linspace(1e-5, Rmax, size)
+
 def delta_R(R):
     dels = delta[radius<R]
     rads = radius[radius<R]
@@ -40,34 +37,48 @@ def delta_R(R):
 #    drs = radius[1:]-radius[:-1]
 #    dr = drs[radius<R]
     return np.sum(rads*dels*flis*dlr)
-scales = np.logspace(-1, 0, 100)
-Mass = 6*np.pi**2*rho_m(0)*scales**3
-import matplotlib.ticker as tkr
-Niter = 10
-fig, ax = plt.subplots()
-for iter in range(Niter):
-    delta = np.random.normal(0, si, size = size)
-    res = []
-    for R in scales:
-        res.append(delta_R(R))
-    #ax.plot(1/scales[50:], np.array(res[50:]), color='black', linewidth=0.5)
-    ax.plot(1/Mass[50:], np.array(res[50:]), color='black', linewidth=0.5)
 
-    plt.xscale('log')
-plt.xlabel('1/M', size=20)
-plt.ylabel('$\delta$', size=20)
-#plt.xlim(1/scales[-1], 1/scales[50])
-y1 = delta_c(0)
-y2 = delta_c(1)
-y3 = delta_c(2)
-#plt.hlines(y1, 1/scales[-1], 1/scales[50], colors= 'green', label= 'z = 0')
-#plt.hlines(y2, 1/scales[-1], 1/scales[50], colors= 'blue', label= 'z = 1')
-#plt.hlines(y3, 1/scales[-1], 1/scales[50], colors= 'red', label= 'z = 2')
-plt.hlines(y1, 1/Mass[-1], 1/Mass[50], colors= 'green', label= 'z = 0')
-plt.hlines(y2, 1/Mass[-1], 1/Mass[50], colors= 'blue', label= 'z = 1')
-plt.hlines(y3, 1/Mass[-1], 1/Mass[50], colors= 'red', label= 'z = 2')
-#ax.xaxis.set_minor_formatter(tkr.NullFormatter())
-ax.xaxis.set_major_formatter(tkr.NullFormatter())
+if __name__ == "__main__":
+    size = 1000
+    si = sig()
 
-plt.legend()
-plt.show()
+    Rmax = 10
+    dr = Rmax/size
+
+    scales = np.logspace(-1, 0, 100)
+    Mass = 6*np.pi**2*cp.rho_m(0)*scales**3
+
+    radius = np.logspace(-5, np.log10(Rmax), size)
+    dlr = (np.log(Rmax) - np.log(1e-5))/size
+    #radius = np.linspace(1e-5, Rmax, size)
+
+    import matplotlib.ticker as tkr
+    import matplotlib.pyplot as plt
+    Niter = 10
+    fig, ax = plt.subplots()
+    for iter in range(Niter):
+        delta = np.random.normal(0, si, size = size)
+        res = []
+        for R in scales:
+            res.append(delta_R(R))
+        #ax.plot(1/scales[50:], np.array(res[50:]), color='black', linewidth=0.5)
+        ax.plot(1/Mass[50:], np.array(res[50:]), color='black', linewidth=0.5)
+
+        plt.xscale('log')
+    plt.xlabel('1/M', size=20)
+    plt.ylabel('$\delta$', size=20)
+    #plt.xlim(1/scales[-1], 1/scales[50])
+    y1 = cp.delta_c(0)
+    y2 = cp.delta_c(1)
+    y3 = cp.delta_c(2)
+    #plt.hlines(y1, 1/scales[-1], 1/scales[50], colors= 'green', label= 'z = 0')
+    #plt.hlines(y2, 1/scales[-1], 1/scales[50], colors= 'blue', label= 'z = 1')
+    #plt.hlines(y3, 1/scales[-1], 1/scales[50], colors= 'red', label= 'z = 2')
+    plt.hlines(y1, 1/Mass[-1], 1/Mass[50], colors= 'green', label= 'z = 0')
+    plt.hlines(y2, 1/Mass[-1], 1/Mass[50], colors= 'blue', label= 'z = 1')
+    plt.hlines(y3, 1/Mass[-1], 1/Mass[50], colors= 'red', label= 'z = 2')
+    #ax.xaxis.set_minor_formatter(tkr.NullFormatter())
+    ax.xaxis.set_major_formatter(tkr.NullFormatter())
+
+    plt.legend()
+    plt.show()

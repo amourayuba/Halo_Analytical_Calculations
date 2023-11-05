@@ -1,4 +1,5 @@
-from cosmo_parameters import *
+import numpy as np
+import cosmo_parameters as cp
 
 ########################################################################################################################
 
@@ -6,7 +7,7 @@ from cosmo_parameters import *
 
 ########################################################################################################################
 
-def Transfer(k, omega=om, omega_b=omb, h=h, Tcmb=Tcmb):
+def transfer(k, omega=cp.om, omega_b=cp.omb, h=cp.h, Tcmb=cp.Tcmb):
     """
     Transfer function from Eisenstein and Hu 1998
     :param k : wave number

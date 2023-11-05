@@ -1,10 +1,13 @@
-from halo_mass_function import *
+import numpy as np
+import cosmo_parameters as cp
+from fluctuation_rms import sigma
+from halo_mass_function import fps
 from autograd import grad
 from math import factorial
 
 
-def upcrossing(M1, M2, z1, z2, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000, om0=om,
-               ol0=oml, omb=omb, camb=False):
+def upcrossing(M1, M2, z1, z2, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000, om0=cp.om,
+               ol0=cp.oml, omb=cp.omb, camb=False):
     """
     Upcrossing rate between halos at masses M1 to M2 at redshifts from z1 to z2 with spherical collapse
     :param M1: float Initial mass
@@ -22,8 +25,8 @@ def upcrossing(M1, M2, z1, z2, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=
     :param camb: bool whether to use the camb power spectrum
     :return: float conditional probability of going from M1,z1 to M2, s2
     """
-    w1 = delta_c(z1, om0, ol0)  # critical overdensity at z1
-    w2 = delta_c(z2, om0, ol0)
+    w1 = cp.delta_c(z1, om0, ol0)  # critical overdensity at z1
+    w2 = cp.delta_c(z2, om0, ol0)
     S1 = sigma(M1, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) ** 2
     S2 = sigma(M2, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb) ** 2
     dw = w1 - w2
@@ -117,8 +120,8 @@ def ngTaylor(s, x0, dB, order, axis=0):
     return res
 
 
-def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=300, om0=om,
-          ol0=oml, omb=omb, camb=False, model='EC', colos=False, alpha=0.615, beta=0.485, a=0.7, order=3):
+def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=300, om0=cp.om,
+          ol0=cp.oml, omb=cp.omb, camb=False, model='EC', colos=False, alpha=0.615, beta=0.485, a=0.7, order=3):
     """
      Probability density of a halo of mass M at redshift zi has had a fraction frac of its mass at z=zf.
      :param M: float. mass of the halo considered
@@ -140,13 +143,13 @@ def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='
      :return: Probability density function of redshift at which halos had x fraction of their mass
      """
     S0 = sigma(M, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos) ** 2  # variance of the field at mass M
-    w0 = delta_c(zi, om0, ol0)  # critical density at observed redshift
+    w0 = cp.delta_c(zi, om0, ol0)  # critical density at observed redshift
     if type(zf) == np.ndarray:  # for probability distribution. This is to have a parallel version with no for loops
         mass = np.logspace(np.log10(M * frac), np.log10(M), acc)  # size (0, acc) masses to calculate the integral
         l = len(zf)  # number of steps in PDF
         mat_zf = np.array([zf] * acc)  # (acc, l)
         mat_mass = np.array([mass] * l).transpose()  # duplicating mass array to vectoralize calculations (acc, l)
-        mat_wf = delta_c(mat_zf, om0, ol0) - w0  # (acc, l)
+        mat_wf = cp.delta_c(mat_zf, om0, ol0) - w0  # (acc, l)
         mat_S = sigma(mat_mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb,
                       colos) ** 2 - S0  # variance difference of all masses (acc, l)
         mat_S[-1, :] = 1e-10  # nonzero value to avoid numerical effects
@@ -170,7 +173,7 @@ def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='
             return M * np.sum(mat_dnu * mat_f[1:-1, :] / mat_mass[1:-2, :], axis=0)  # (acc-3, l)
     else:  # case of only one value of redshift to get the probability distribution of.
         mass = np.logspace(np.log10(M * frac), np.log10(M), acc)
-        wf = delta_c(zf, om0, ol0) - w0
+        wf = cp.delta_c(zf, om0, ol0) - w0
         S = sigma(mass, sig8, h, kmax, window, 'M', prec, om0, ol0, omb, camb, colos) ** 2 - S0
         S[-1] = 1e-10
         nu = wf / np.sqrt(S)
@@ -195,9 +198,9 @@ def proba(M, zf, frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h, kmax=30, window='
             return M * np.sum(dnu * f[1:-1] / mass[1:-1])
 
 
-def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20), frac=0.5, acc=1000, zi=0.0, sig8=sigma8, h=h,
-                  kmax=30, window='TopHat', prec=1000, om0=om, diff=False,
-                  ol0=oml, omb=omb, camb=False, model='EC', colos=False):
+def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20), frac=0.5, acc=1000, zi=0.0, sig8=cp.sigma8, h=cp.h,
+                  kmax=30, window='TopHat', prec=1000, om0=cp.om, diff=False,
+                  ol0=cp.oml, omb=cp.omb, camb=False, model='EC', colos=False):
     """
     Mass weighted cummulative probability of zf
     :param masses: list or np.array masses of halos to get the average zf
@@ -235,8 +238,8 @@ def M_integ_proba(masses, weights=None, zf=np.linspace(0, 7, 20), frac=0.5, acc=
         return np.sum(ares, axis=0)
 
 
-def median_formation(M, z, frac=0.5, acc=100, nzeds=10000, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000,
-                     om0=om, ol0=oml, omb=omb, model='EC', camb=False, colos=True, outc=False):
+def median_formation(M, z, frac=0.5, acc=100, nzeds=10000, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000,
+                     om0=cp.om, ol0=cp.oml, omb=cp.omb, model='EC', camb=False, colos=True, outc=False):
     """
     Calculates the median formation redshift of halos of mass M at redshift z, and gets the concentration if needed    :param M: float M
     :param z: float redshift
@@ -257,8 +260,8 @@ def median_formation(M, z, frac=0.5, acc=100, nzeds=10000, sig8=sigma8, h=h, kma
         return zf
 
 
-def average_formation(M, z, frac=0.5, acc=100, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000,
-                      om0=om, ol0=oml, omb=omb, camb=False, colos=True, outc=False):
+def average_formation(M, z, frac=0.5, acc=100, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000,
+                      om0=cp.om, ol0=cp.oml, omb=cp.omb, camb=False, colos=True, outc=False):
     # Gets the average z50 of a population of halos at mass M and redshift z
     if type(M) == list or type(M) == np.ndarray:
         raise TypeError("M should not be an array")
@@ -279,8 +282,8 @@ def average_formation(M, z, frac=0.5, acc=100, sig8=sigma8, h=h, kmax=30, window
         return [lower, upper]
 
 
-def peak_formation(M, z, frac=0.5, acc=100, sig8=sigma8, h=h, kmax=30, window='TopHat', prec=1000,
-                   om0=om, ol0=oml, omb=omb, camb=False, colos=True, outc=False):
+def peak_formation(M, z, frac=0.5, acc=100, sig8=cp.sigma8, h=cp.h, kmax=30, window='TopHat', prec=1000,
+                   om0=cp.om, ol0=cp.oml, omb=cp.omb, camb=False, colos=True, outc=False):
     # Gets the redshift at which the z50 probability distribution peaks
 
     if type(M) == list or type(M) == np.ndarray:
