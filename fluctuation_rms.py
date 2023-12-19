@@ -101,7 +101,7 @@ def camb_power_spectrum(h=cp.h, ombh2=cp.ombh2, omch2=cp.omch2, ns=cp.ns, sig8=c
         return ([kh, zs, norm * pk[0]], [kh_nonlin, z_nonlin, norm * pk_nonlin[0]])
 
 
-def sigma_R(R, sig8=cp.sigma8, h=h, omb=cp.omb, om0=cp.om, ol0=cp.oml, ns=cp.ns, kmax=30, prec=1000, window=W_th, camb=False,
+def sigma_R(R, sig8=cp.sigma8, h=cp.h, omb=cp.omb, om0=cp.om, ol0=cp.oml, ns=cp.ns, kmax=30, prec=1000, window=W_th, camb=False,
             test=False, Colos=False):
     """
     fluctuation rms of smoothed field with a scale R
